@@ -1,0 +1,2199 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lexicon - The Ultimate Quiz Challenge</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Cinzel+Decorative:wght@700&display=swap" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/tone/14.7.77/Tone.js"></script>
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            touch-action: manipulation;
+            transition: background-color 0.5s ease;
+        }
+
+        /* --- Default Lexicon Theme --- */
+        .theme-lexicon {
+            background-color: #141E30;
+            background-image: linear-gradient(to top right, #141E30, #243B55);
+            color: white;
+        }
+        /* --- New Ocean Theme --- */
+        .theme-ocean {
+            background-color: #004e92;
+            background-image: linear-gradient(to top right, #004e92, #000428);
+            color: white;
+        }
+        /* --- New Forest Theme --- */
+        .theme-forest {
+            background-color: #134E5E;
+            background-image: linear-gradient(to top right, #134E5E, #71B280);
+            color: white;
+        }
+
+        .btn { transition: all 0.2s ease-in-out; }
+        .btn:hover:not(:disabled) {
+            transform: translateY(-3px) scale(1.03);
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+        }
+        .correct {
+            animation: pulse-green 1s;
+            background-color: #28a745 !important;
+            color: white !important;
+            border-color: #28a745 !important;
+        }
+        .incorrect {
+            animation: shake 0.5s;
+            background-color: #dc3545 !important;
+            color: white !important;
+            border-color: #dc3545 !important;
+        }
+        .level-btn.locked {
+            background-color: #4a5568;
+            cursor: not-allowed;
+            opacity: 0.6;
+        }
+        .timer-bar { transition: width 1s linear; }
+        .lifeline.used {
+            opacity: 0.4;
+            cursor: not-allowed;
+            transform: scale(0.9);
+        }
+        #explanation-box {
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.5s ease-out, padding 0.5s ease-out;
+        }
+        .spinner, .spinner-small {
+            border: 4px solid rgba(255, 255, 255, 0.3);
+            border-left-color: #fff;
+            border-radius: 50%;
+            width: 24px;
+            height: 24px;
+            animation: spin 1s linear infinite;
+        }
+        .spinner-small {
+            width: 20px;
+            height: 20px;
+            border-width: 3px;
+        }
+        .lexicon-title {
+            font-family: 'Cinzel Decorative', serif;
+            font-size: clamp(3rem, 10vw, 6rem);
+            font-weight: 700;
+        }
+        #achievement-toast {
+            transition: transform 0.5s ease-in-out, opacity 0.5s ease-in-out;
+            transform: translateY(100%);
+            opacity: 0;
+        }
+        #achievement-toast.show {
+            transform: translateY(0);
+            opacity: 1;
+        }
+
+        .play-btn {
+            background: linear-gradient(45deg, #6366f1, #a855f7, #ec4899);
+            background-size: 200% 200%;
+            animation: gradient-animation 4s ease infinite;
+        }
+
+        /* Form Styles */
+        .form-select, .form-input {
+            background-color: rgba(0, 0, 0, 0.2);
+            border: 1px solid #4a5568;
+            color: white;
+            padding: 0.75rem;
+            border-radius: 0.5rem;
+            width: 100%;
+            font-size: 1rem;
+        }
+         /* Style for dropdown options */
+        .form-select option {
+            background-color: #243B55; /* Match background */
+            color: white;
+        }
+        .form-select:disabled, .form-input:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+        .form-label {
+            font-weight: 600;
+            margin-bottom: 0.5rem;
+            display: block;
+            color: #cbd5e1;
+        }
+
+        /* Credit Style */
+        .credit-text {
+             font-family: ui-serif, Georgia, Cambria, "Times New Roman", Times, serif; /* Tailwind's font-serif */
+             font-style: italic;
+             color: #94a3b8; /* Tailwind gray-500 */
+             margin-top: 2rem; /* Add some space */
+        }
+
+        @keyframes gradient-animation {
+            0% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+            100% { background-position: 0% 50%; }
+        }
+        @keyframes spin { to { transform: rotate(360deg); } }
+        @keyframes pulse-green { 0% { transform: scale(1); } 70% { transform: scale(1.05); } 100% { transform: scale(1); } }
+        @keyframes shake { 0%, 100% { transform: translateX(0); } 10%, 50%, 90% { transform: translateX(-5px); } 30%, 70% { transform: translateX(5px); } }
+    </style>
+</head>
+<body class="theme-lexicon overflow-hidden h-screen flex items-center justify-center p-2 sm:p-4">
+
+    <div id="app-container" class="w-full h-full max-w-7xl mx-auto flex flex-col items-center justify-center">
+
+        <!-- Start Screen -->
+        <div id="start-screen" class="text-center">
+            <h1 class="lexicon-title bg-clip-text text-transparent bg-gradient-to-r from-blue-400 to-purple-500 mb-8">Lexicon</h1>
+            <p class="text-xl md:text-2xl text-gray-300 mb-12">The Ultimate Quiz Challenge</p>
+            <div id="language-selection" class="flex flex-wrap justify-center gap-4">
+                <!-- Language buttons will be generated here -->
+            </div>
+            <!-- Credit Line Added -->
+            <p class="credit-text text-lg">Made By SaHiL (NIMS Marik)</p>
+        </div>
+
+        <!-- Main Menu Screen -->
+        <div id="main-menu-screen" class="hidden w-full h-full flex-col p-4">
+             <div class="flex justify-between items-center mb-4">
+                 <button id="back-to-start-screen" class="text-white bg-black bg-opacity-20 p-3 rounded-full hover:bg-opacity-40 transition">
+                     <i class="fas fa-arrow-left"></i>
+                 </button>
+                 <h2 class="text-4xl font-bold text-center flex-grow lexicon-title bg-clip-text text-transparent bg-gradient-to-r from-blue-400 to-purple-500">Lexicon</h2>
+                 <div class="w-12"></div> <!-- Spacer -->
+             </div>
+             <div class="flex-grow flex flex-col items-center justify-center gap-8">
+                 <button id="play-btn" class="btn play-btn text-white font-bold py-8 px-24 rounded-2xl text-6xl shadow-lg">
+                     PLAY
+                 </button>
+                 <div class="w-full max-w-sm space-y-4">
+                     <button id="student-section-btn" class="btn w-full bg-blue-600 hover:bg-blue-700 p-4 rounded-lg text-xl font-semibold">
+                         <i class="fas fa-user-graduate mr-2"></i> Student Section
+                     </button>
+                     <button id="store-btn" class="btn w-full bg-green-600 hover:bg-green-700 p-4 rounded-lg text-xl font-semibold">
+                         <i class="fas fa-store mr-2"></i> Store
+                     </button>
+                 </div>
+             </div>
+        </div>
+
+        <!-- Student Section Screen -->
+        <div id="student-section-screen" class="hidden w-full h-full flex-col p-4">
+            <div class="flex justify-between items-center mb-4">
+                <button id="back-to-main-menu-from-student" class="text-white bg-black bg-opacity-20 p-3 rounded-full hover:bg-opacity-40 transition">
+                    <i class="fas fa-arrow-left"></i>
+                </button>
+                <h2 class="text-3xl font-bold text-center flex-grow text-blue-300">Student Practice Center</h2>
+                <div class="w-12"></div> <!-- Spacer -->
+            </div>
+            <div class="flex-grow overflow-y-auto p-4 bg-black bg-opacity-20 rounded-lg">
+                <div class="max-w-3xl mx-auto grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <!-- Column 1 -->
+                    <div>
+                        <label for="student-name-input" class="form-label">Name (Optional)</label>
+                        <input type="text" id="student-name-input" class="form-input" placeholder="Enter your name...">
+                    </div>
+                    <div>
+                        <label for="student-class-select" class="form-label">Class / Grade</label>
+                        <select id="student-class-select" class="form-select">
+                            <option value="">Select your class</option>
+                            <option value="Grade 1-5">Grade 1-5 (Elementary)</option>
+                            <option value="Grade 6-8">Grade 6-8 (Middle School)</option>
+                            <option value="Grade 9-10">Grade 9-10 (High School)</option>
+                            <option value="Grade 11-12">Grade 11-12 (High School)</option>
+                            <option value="College/University">College / University</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label for="student-country-select" class="form-label">Country</label>
+                        <select id="student-country-select" class="form-select">
+                            <option value="">Select your country</option>
+                            <!-- Countries will be populated by JS -->
+                        </select>
+                    </div>
+                    <div>
+                        <label for="student-board-select" class="form-label">Board / Curriculum</label>
+                        <select id="student-board-select" class="form-select" disabled>
+                            <option value="">Select country first</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label for="student-subject-select" class="form-label">Subject</label>
+                        <select id="student-subject-select" class="form-select" disabled>
+                            <option value="">Select class first</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label for="student-topic-select" class="form-label">Topic</label>
+                        <select id="student-topic-select" class="form-select" disabled>
+                            <option value="">Select subject first</option>
+                        </select>
+                    </div>
+                    <!-- Column 2 -->
+                    <div class="md:col-span-2">
+                        <label for="student-difficulty-slider" class="form-label">Difficulty: <span id="student-difficulty-display" class="font-bold text-blue-300">5</span>/10</label>
+                        <input type="range" id="student-difficulty-slider" min="1" max="10" value="5" class="w-full h-3 bg-gray-700 rounded-lg appearance-none cursor-pointer range-lg">
+                    </div>
+                    <div class="md:col-span-2">
+                        <label for="student-question-count-select" class="form-label">Number of Questions</label>
+                        <select id="student-question-count-select" class="form-select">
+                            <option value="10">10 Questions</option>
+                            <option value="25">25 Questions</option>
+                            <option value="50">50 Questions</option>
+                            <option value="100">100 Questions</option>
+                        </select>
+                    </div>
+                    <div class="md:col-span-2">
+                        <button id="student-start-quiz-btn" class="btn w-full bg-green-600 hover:bg-green-700 text-white font-bold py-4 px-8 rounded-lg text-xl flex items-center justify-center">
+                            <span id="student-start-quiz-btn-text">Let's Start!</span>
+                            <div id="student-start-quiz-spinner" class="spinner hidden"></div>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+
+        <!-- Level Select Screen -->
+        <div id="level-select-screen" class="hidden w-full h-full flex flex-col p-4">
+             <div class="flex justify-between items-center mb-4">
+                 <button id="back-to-main-menu" class="text-white bg-black bg-opacity-20 p-3 rounded-full hover:bg-opacity-40 transition">
+                     <i class="fas fa-arrow-left"></i>
+                 </button>
+                 <div class="flex items-center gap-2 bg-black bg-opacity-20 py-2 px-4 rounded-full">
+                     <i class="fas fa-coins text-yellow-400"></i>
+                     <span id="coin-balance" class="text-xl font-bold">0</span>
+                 </div>
+                 <div class="flex gap-2">
+                    <button id="settings-btn" class="text-white bg-gray-600 bg-opacity-50 p-3 rounded-full hover:bg-opacity-80 transition" title="Settings">
+                        <i class="fas fa-cog"></i>
+                    </button>
+                     <button id="achievements-btn" class="text-white bg-yellow-600 bg-opacity-50 p-3 rounded-full hover:bg-opacity-80 transition" title="View Achievements">
+                         <i class="fas fa-trophy"></i>
+                     </button>
+                     <button id="reset-progress-btn" class="text-white bg-red-800 bg-opacity-50 p-3 rounded-full hover:bg-opacity-80 transition" title="Reset All Progress">
+                         <i class="fas fa-trash-alt"></i>
+                     </button>
+                 </div>
+             </div>
+             <!-- Daily Challenge & Custom Quiz -->
+             <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                 <button id="daily-challenge-btn" class="btn p-4 bg-indigo-600 rounded-lg text-center w-full">
+                     <h3 class="text-2xl font-bold text-indigo-200 mb-2">📅 Daily Challenge</h3>
+                     <p id="daily-challenge-desc" class="text-gray-300">A unique 15-question quiz. New challenge every day!</p>
+                 </button>
+                 <div id="custom-quiz-generator" class="p-4 bg-black bg-opacity-20 rounded-lg text-center">
+                     <h3 class="text-2xl font-bold text-yellow-400 mb-2">✨ Custom Quiz</h3>
+                     <div class="flex gap-2">
+                         <input type="text" id="custom-topic-input" class="w-full bg-gray-800 text-white rounded-lg px-4" placeholder="Enter any topic...">
+                         <button id="generate-quiz-btn" class="btn bg-yellow-500 hover:bg-yellow-600 text-black font-bold py-2 px-4 rounded-lg flex items-center justify-center w-32">
+                             <span id="generate-btn-text">Generate</span>
+                             <div id="generate-spinner" class="spinner-small hidden"></div>
+                         </button>
+                     </div>
+                 </div>
+             </div>
+             <div id="level-grid" class="flex-grow grid grid-cols-5 sm:grid-cols-7 md:grid-cols-10 gap-3 overflow-y-auto p-4 bg-black bg-opacity-20 rounded-lg">
+                 <!-- Level buttons will be generated here -->
+             </div>
+        </div>
+
+        <!-- Quiz Screen -->
+        <div id="quiz-screen" class="hidden w-full h-full flex flex-col justify-between p-4 md:p-8 bg-black bg-opacity-30 rounded-2xl shadow-2xl backdrop-blur-sm border border-gray-700">
+            <!-- Quiz Screen content remains unchanged -->
+             <div class="flex justify-between items-center mb-2">
+                 <div class="w-28">
+                     <button id="back-to-levels-btn" class="text-white bg-black bg-opacity-20 p-3 rounded-full hover:bg-opacity-40 transition"><i class="fas fa-arrow-left"></i></button>
+                 </div>
+                 <div class="text-lg font-bold text-center">Level <span id="current-level-display">1</span></div>
+                 <div class="flex items-center gap-4 w-28 justify-end">
+                     <button id="mute-btn" class="text-white text-xl p-2"><i class="fas fa-volume-up"></i></button>
+                     <div class="text-lg font-bold">Score: <span id="score-display">0</span></div>
+                 </div>
+             </div>
+             <div class="flex justify-center items-center gap-8 my-4">
+                 <div id="lifeline-5050" class="lifeline flex flex-col items-center cursor-pointer transition-transform duration-200 hover:scale-110 relative">
+                     <div class="w-14 h-14 bg-gray-800 rounded-full flex items-center justify-center border-2 border-purple-500"><i class="fas fa-star-of-life text-2xl text-purple-400"></i></div>
+                     <span class="mt-2 text-sm font-semibold">50:50</span>
+                     <span id="lifeline-5050-count" class="absolute -top-1 -right-1 bg-purple-500 text-white text-xs font-bold rounded-full h-6 w-6 flex items-center justify-center">0</span>
+                 </div>
+                 <div id="lifeline-hint" class="lifeline flex flex-col items-center cursor-pointer transition-transform duration-200 hover:scale-110 relative">
+                      <div class="w-14 h-14 bg-gray-800 rounded-full flex items-center justify-center border-2 border-yellow-500"><i class="fas fa-lightbulb text-2xl text-yellow-400"></i></div>
+                     <span class="mt-2 text-sm font-semibold">✨ Hint</span>
+                     <span id="lifeline-hint-count" class="absolute -top-1 -right-1 bg-yellow-500 text-black text-xs font-bold rounded-full h-6 w-6 flex items-center justify-center">0</span>
+                 </div>
+                 <div class="flex flex-col items-center">
+                     <div id="streak-counter" class="w-14 h-14 bg-gray-800 rounded-full flex items-center justify-center border-2 border-transparent text-2xl font-bold">0</div>
+                     <span class="mt-2 text-sm font-semibold">Streak</span>
+                 </div>
+             </div>
+             <div class="w-full bg-gray-700 rounded-full h-4 mb-4"><div id="timer-bar" class="bg-gradient-to-r from-green-400 to-blue-500 h-4 rounded-full"></div></div>
+             <div class="flex-grow flex flex-col items-center justify-center text-center">
+                 <div id="question-box" class="w-full bg-black bg-opacity-40 p-6 rounded-lg border border-gray-600 relative">
+                     <p id="question-text" class="text-xl md:text-3xl font-semibold">Loading question...</p>
+                 </div>
+             </div>
+             <div id="answers-box" class="grid grid-cols-1 md:grid-cols-2 gap-4 mt-6"></div>
+             <div id="explanation-box" class="mt-6 bg-black bg-opacity-40 p-0 rounded-lg border border-gray-600">
+                 <div id="correct-explanation-div" class="p-4">
+                     <h3 class="font-bold text-lg text-blue-300 mb-2">✨ Learn More</h3>
+                     <p id="explanation-text" class="text-gray-300">Loading explanation...</p>
+                 </div>
+                 <div id="incorrect-explanation-div" class="hidden p-4 border-t border-yellow-500/50">
+                     <h3 class="font-bold text-lg text-yellow-400 mb-2">Why was my choice wrong?</h3>
+                     <p id="incorrect-explanation-text" class="text-gray-300">Loading feedback...</p>
+                 </div>
+                 <div id="follow-up-div" class="hidden p-4 border-t border-green-500/50">
+                     <button id="follow-up-btn" class="btn bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 rounded-lg w-full flex items-center justify-center gap-2">
+                         <i class="fas fa-question-circle"></i> ✨ Ask a follow-up question
+                     </button>
+                 </div>
+             </div>
+        </div>
+    </div>
+
+    <!-- Modals -->
+    <div id="modal-container" class="hidden fixed inset-0 bg-black bg-opacity-80 flex items-center justify-center z-50 p-4">
+        <!-- Level Result Modal -->
+        <div id="level-result-modal" class="hidden bg-lexicon border-2 border-blue-400 text-center p-10 rounded-2xl shadow-lg max-w-md w-full">
+            <h2 id="modal-title" class="text-4xl font-bold text-blue-400 mb-4">Level Complete!</h2>
+            <p id="modal-message" class="text-xl mb-2">Your score: <span id="final-score" class="font-bold">0/0</span></p>
+            <p id="modal-percentage" class="text-lg mb-8">(<span class="font-bold">0%</span>)</p>
+            <p id="modal-status" class="text-2xl font-bold mb-8"></p>
+            <div class="flex flex-col gap-4">
+                <button id="next-action-btn" class="btn bg-blue-500 hover:bg-blue-600 text-white font-bold py-3 px-8 rounded-full text-lg">Continue</button>
+                <button id="analyze-performance-btn" class="hidden btn bg-yellow-500 hover:bg-yellow-600 text-black font-bold py-3 px-8 rounded-full text-lg">✨ Analyze My Performance</button>
+            </div>
+        </div>
+        <!-- Hint Modal -->
+        <div id="hint-modal" class="hidden bg-lexicon border-2 border-yellow-400 text-center p-10 rounded-2xl shadow-lg max-w-md w-full">
+            <h2 class="text-3xl font-bold text-yellow-400 mb-4">✨ Here's a Hint!</h2>
+            <p id="hint-text" class="text-xl mb-8"></p>
+            <button id="close-hint-btn" class="bg-yellow-500 hover:bg-yellow-600 text-black font-bold py-3 px-8 rounded-full text-lg btn">Got it!</button>
+        </div>
+        <!-- Confirm Modal -->
+        <div id="confirm-modal" class="hidden bg-lexicon border-2 border-red-500 text-center p-10 rounded-2xl shadow-lg max-w-md w-full">
+            <h2 class="text-3xl font-bold text-red-400 mb-4">Are you sure?</h2>
+            <p id="confirm-text" class="text-xl mb-8"></p>
+            <div class="flex justify-center gap-4">
+                <button id="confirm-cancel-btn" class="bg-gray-600 hover:bg-gray-700 text-white font-bold py-3 px-8 rounded-full text-lg btn">Cancel</button>
+                <button id="confirm-ok-btn" class="bg-red-600 hover:bg-red-700 text-white font-bold py-3 px-8 rounded-full text-lg btn">OK</button>
+            </div>
+        </div>
+        <!-- Analysis Modal -->
+        <div id="analysis-modal" class="hidden bg-lexicon border-2 border-yellow-400 text-center p-10 rounded-2xl shadow-lg max-w-lg w-full">
+            <h2 class="text-3xl font-bold text-yellow-400 mb-4">✨ Performance Analysis</h2>
+            <p id="analysis-text" class="text-lg mb-8 text-left"></p>
+            <button id="close-analysis-btn" class="bg-yellow-500 hover:bg-yellow-600 text-black font-bold py-3 px-8 rounded-full text-lg btn">Got it!</button>
+        </div>
+        <!-- Achievements Modal -->
+        <div id="achievements-modal" class="hidden bg-lexicon border-2 border-yellow-400 p-8 rounded-2xl shadow-lg max-w-2xl w-full flex flex-col">
+            <div class="flex justify-between items-center mb-6">
+                <h2 class="text-3xl font-bold text-yellow-400">🏆 Achievements</h2>
+                <button id="close-achievements-btn" class="text-white bg-black bg-opacity-20 p-3 rounded-full hover:bg-opacity-40 transition" title="Back">
+                    <i class="fas fa-arrow-left"></i>
+                </button>
+            </div>
+            <div id="achievements-list" class="flex-grow overflow-y-auto space-y-4 pr-4">
+                <!-- Achievements will be populated here -->
+            </div>
+        </div>
+        <!-- Store Modal -->
+        <div id="store-modal" class="hidden bg-lexicon border-2 border-green-400 p-8 rounded-2xl shadow-lg max-w-2xl w-full flex flex-col">
+            <div class="flex justify-between items-center mb-6">
+                <h2 class="text-3xl font-bold text-green-400"><i class="fas fa-store"></i> Store</h2>
+                <button id="close-store-btn" class="text-white bg-black bg-opacity-20 p-3 rounded-full hover:bg-opacity-40 transition" title="Back">
+                    <i class="fas fa-arrow-left"></i>
+                </button>
+            </div>
+            <div id="store-items-list" class="flex-grow overflow-y-auto space-y-4 pr-4">
+                <!-- Store items will be populated here -->
+            </div>
+        </div>
+        <!-- Settings Modal -->
+        <div id="settings-modal" class="hidden bg-lexicon border-2 border-gray-400 p-8 rounded-2xl shadow-lg max-w-lg w-full flex flex-col">
+            <div class="flex justify-between items-center mb-6">
+                <h2 class="text-3xl font-bold text-gray-300"><i class="fas fa-cog"></i> Settings</h2>
+                <button id="close-settings-btn" class="text-white bg-black bg-opacity-20 p-3 rounded-full hover:bg-opacity-40 transition" title="Back">
+                    <i class="fas fa-arrow-left"></i>
+                </button>
+            </div>
+            <div class="space-y-6">
+                <div>
+                    <label for="language-change-select" class="form-label">Language (for generated quizzes)</label>
+                    <select id="language-change-select" class="form-select"></select>
+                </div>
+                <div>
+                    <label for="theme-change-select" class="form-label">App Theme</label>
+                    <select id="theme-change-select" class="form-select">
+                        <option value="theme-lexicon">Lexicon (Default)</option>
+                        <option value="theme-ocean">Ocean</option>
+                        <option value="theme-forest">Forest</option>
+                    </select>
+                </div>
+                <div>
+                    <label for="volume-slider" class="form-label">BGM Volume</label>
+                    <input type="range" id="volume-slider" min="0" max="1" step="0.1" value="0.3" class="w-full h-3 bg-gray-700 rounded-lg appearance-none cursor-pointer range-lg">
+                </div>
+                <button id="fullscreen-btn" class="btn w-full bg-blue-500 hover:bg-blue-600 p-4 rounded-lg text-lg font-semibold">
+                    <i class="fas fa-expand mr-2"></i> Enter Fullscreen
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Achievement Unlocked Toast -->
+    <div id="achievement-toast" class="fixed bottom-4 right-4 bg-yellow-500 text-black p-4 rounded-lg shadow-lg flex items-center gap-4 z-50">
+        <i class="fas fa-trophy text-2xl"></i>
+        <div>
+            <p class="font-bold">Achievement Unlocked!</p>
+            <p id="achievement-toast-name"></p>
+        </div>
+        <div class="ml-auto font-bold flex items-center gap-1">
+            <i class="fas fa-coins"></i>
+            <span id="achievement-toast-coins"></span>
+        </div>
+    </div>
+
+    <script type="module">
+        // Firebase Imports
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, doc, getDoc, setDoc, onSnapshot, deleteDoc, setLogLevel } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+        // -----------------------------------------------------------------
+        // --- IMPORTANT: API KEY CONFIGURATION ---
+        // -----------------------------------------------------------------
+        const apiKey = "gen-lang-client-0841788054"; // <<< YOUR KEY IS HERE
+        // -----------------------------------------------------------------
+
+
+        // --- MASTER DATA STRUCTURE ---
+        const allQuestions = {
+            'en': {
+                1: [
+                    { question: "What is the capital of France?", options: ["Berlin", "Madrid", "Paris", "Rome"], answer: "Paris", explanation: "Paris is the capital and most populous city of France, located on the Seine River in the north of the country." },
+                    { question: "Which planet is known as the Red Planet?", options: ["Earth", "Mars", "Jupiter", "Venus"], answer: "Mars", explanation: "Mars is often called the 'Red Planet' because of its reddish appearance, which is caused by iron oxide (rust) on its surface." },
+                    { question: "Who wrote 'Romeo and Juliet'?", options: ["Charles Dickens", "William Shakespeare", "Jane Austen", "Mark Twain"], answer: "William Shakespeare", explanation: "Romeo and Juliet is a tragedy written by William Shakespeare early in his career about two young Italian star-crossed lovers." },
+                ],
+                2: [
+                    { question: "What is the largest mammal in the world?", options: ["Elephant", "Blue Whale", "Giraffe", "Great White Shark"], answer: "Blue Whale", explanation: "The blue whale is the largest animal on the planet, weighing as much as 200 tons (approximately 33 elephants)." },
+                    { question: "What element does 'O' represent on the periodic table?", options: ["Gold", "Oxygen", "Osmium", "Oganesson"], answer: "Oxygen", explanation: "The chemical symbol 'O' stands for Oxygen, a crucial element for life with an atomic number of 8." },
+                ]
+                // Add more English levels here if needed
+            }
+            // Other languages might be generated on the fly by the API
+        };
+        const achievements = {
+             'novice': { title: "Novice", description: "Reach Level 5.", icon: 'fa-seedling', color: 'text-green-400', bgColor: 'bg-green-600', reward: 100 },
+             'apprentice': { title: "Apprentice", description: "Reach Level 10.", icon: 'fa-book-reader', color: 'text-blue-400', bgColor: 'bg-blue-600', reward: 150 },
+             'journeyman': { title: "Journeyman", description: "Reach Level 15.", icon: 'fa-hammer', color: 'text-gray-400', bgColor: 'bg-gray-600', reward: 200 },
+             'adept': { title: "Adept", description: "Reach Level 20.", icon: 'fa-star', color: 'text-yellow-300', bgColor: 'bg-yellow-700', reward: 250 },
+             'iron': { title: "Iron Inquirer", description: "Reach Level 25.", icon: 'fa-shield-alt', color: 'text-gray-400', bgColor: 'bg-gray-600', reward: 300 },
+             'bronze': { title: "Bronze Brainiac", description: "Reach Level 50.", icon: 'fa-award', color: 'text-orange-400', bgColor: 'bg-orange-600', reward: 500 },
+             'silver': { title: "Silver Scholar", description: "Reach Level 75.", icon: 'fa-medal', color: 'text-slate-300', bgColor: 'bg-slate-600', reward: 750 },
+             'gold': { title: "Golden Guru", description: "Reach Level 100.", icon: 'fa-trophy', color: 'text-yellow-400', bgColor: 'bg-yellow-600', reward: 1000 },
+             'platinum': { title: "Platinum Prodigy", description: "Reach Level 150.", icon: 'fa-gem', color: 'text-cyan-300', bgColor: 'bg-cyan-600', reward: 1500 },
+             'diamond': { title: "Diamond Sage", description: "Reach Level 200.", icon: 'fa-crown', color: 'text-blue-300', bgColor: 'bg-blue-800', reward: 2000 },
+             'master': { title: "Master Mind", description: "Reach Level 250.", icon: 'fa-brain', color: 'text-pink-400', bgColor: 'bg-pink-800', reward: 2500 },
+             'grandmaster': { title: "Grandmaster", description: "Reach Level 500.", icon: 'fa-chess-king', color: 'text-white', bgColor: 'bg-black', reward: 5000 },
+             'lexicon': { title: "The Lexicon", description: "Reach Level 1000.", icon: 'fa-university', color: 'text-purple-400', bgColor: 'bg-purple-800', reward: 10000 },
+
+             'perfecto': { title: "Perfecto", description: "Get a 100% score on any level.", icon: 'fa-check-circle', color: 'text-green-300', reward: 200 },
+             'streaker': { title: "Streaker", description: "Answer 5 questions correctly in a row.", icon: 'fa-fire', color: 'text-red-400', reward: 50 },
+             'curious': { title: "Curious Mind", description: "Use the 'Follow-up Question' feature.", icon: 'fa-question-circle', color: 'text-teal-300', reward: 25 },
+             'on_a_roll': { title: "On a Roll!", description: "Pass 3 levels in a row.", icon: 'fa-dice', color: 'text-green-400', reward: 150 },
+             'untouchable': { title: "Untouchable", description: "Pass 5 levels in a row.", icon: 'fa-bolt', color: 'text-yellow-300', reward: 300 },
+             'quiz_novice': { title: "Quiz Novice", description: "Answer 50 total questions correctly.", icon: 'fa-graduation-cap', color: 'text-blue-300', reward: 100 },
+        };
+        const milestoneAchievements = { 5: 'novice', 10: 'apprentice', 15: 'journeyman', 20: 'adept', 25: 'iron', 50: 'bronze', 75: 'silver', 100: 'gold', 150: 'platinum', 200: 'diamond', 250: 'master', 500: 'grandmaster', 1000: 'lexicon' };
+        const storeItems = {
+             '5050_pack': { name: '50:50 Pack', description: 'Get 3 extra 50:50 lifelines.', icon: 'fa-star-of-life', color: 'text-purple-400', cost: 250, grant: { type: 'lifeline', key: 'fiftyFifty', amount: 3 } },
+             'hint_pack': { name: 'Hint Pack', description: 'Get 3 extra Hint lifelines.', icon: 'fa-lightbulb', color: 'text-yellow-400', cost: 500, grant: { type: 'lifeline', key: 'hint', amount: 3 } },
+        };
+
+        const config = { TOTAL_LEVELS: 1000, QUESTIONS_PER_LEVEL: 10, DAILY_CHALLENGE_QUESTIONS: 15, PASS_PERCENTAGE: 70, TIME_PER_QUESTION: 30, COINS_PER_CORRECT_ANSWER: 10, COINS_PER_LEVEL_COMPLETE: 50 };
+        const languages = { 'en': 'English', 'hi': 'हिन्दी', 'es': 'Español', 'fr': 'Français', 'de': 'Deutsch', 'ja': '日本語', 'ru': 'Русский', 'ar': 'العربية' };
+
+        // --- Data for Student Section ---
+        const countries = [ "USA", "India", "UK", "Canada", "Australia", "Germany", "France", "Japan", "China", "Brazil", "South Africa" ]; // Add more as needed
+        const countryData = {
+            "USA": { boards: ["Common Core", "AP (Advanced Placement)", "IB (International Baccalaureate)", "State Standards"] },
+            "India": { boards: ["CBSE", "ICSE", "State Board (Various)", "IB (International Baccalaureate)"] },
+            "UK": { boards: ["GCSE", "A-Levels", "IB (International Baccalaureate)"] },
+            "Canada": { boards: ["Provincial Curriculum (e.g., Ontario, BC)", "IB (International Baccalaureate)"] },
+            "Default": { boards: ["National Curriculum", "IB (International Baccalaureate)"] }
+        };
+        const subjectData = {
+            "Grade 1-5": ["Mathematics", "English", "Science", "Social Studies"],
+            "Grade 6-8": ["Mathematics", "English", "Science", "History", "Geography"],
+            "Grade 9-10": ["Mathematics", "Physics", "Chemistry", "Biology", "History", "Geography", "English Literature", "Computer Science"],
+            "Grade 11-12": ["Mathematics", "Physics", "Chemistry", "Biology", "Computer Science", "Economics", "Accounting", "History", "Political Science", "Psychology"],
+            "College/University": ["Computer Science", "Economics", "Psychology", "Mechanical Engineering", "Calculus", "Data Structures", "World History"]
+        };
+        const topicData = {
+            "Mathematics": ["Algebra", "Geometry", "Trigonometry", "Calculus", "Statistics"],
+            "Physics": ["Mechanics", "Optics", "Electromagnetism", "Thermodynamics", "Modern Physics"],
+            "Chemistry": ["Organic Chemistry", "Inorganic Chemistry", "Physical Chemistry", "Atomic Structure"],
+            "Biology": ["Cellular Biology", "Genetics", "Ecology", "Human Anatomy"],
+            "Computer Science": ["Data Structures", "Algorithms", "Operating Systems", "Database Management", "Networking"],
+            "History": ["World War I", "World War II", "The Renaissance", "Ancient Civilizations"],
+            "English": ["Grammar", "Vocabulary", "Shakespearean Literature", "Poetry Analysis"],
+            "Default": ["General Principles", "Key Concepts", "Historical Overview"]
+        };
+
+
+        const dom = {
+            startScreen: document.getElementById('start-screen'),
+            mainMenuScreen: document.getElementById('main-menu-screen'),
+            studentSectionScreen: document.getElementById('student-section-screen'),
+            levelSelectScreen: document.getElementById('level-select-screen'),
+            quizScreen: document.getElementById('quiz-screen'),
+            languageSelectionContainer: document.getElementById('language-selection'),
+            levelGrid: document.getElementById('level-grid'),
+            questionTextEl: document.getElementById('question-text'),
+            answersBoxEl: document.getElementById('answers-box'),
+            currentLevelDisplay: document.getElementById('current-level-display'),
+            scoreDisplay: document.getElementById('score-display'),
+            timerBar: document.getElementById('timer-bar'),
+            backToStartScreen: document.getElementById('back-to-start-screen'),
+            backToMainMenu: document.getElementById('back-to-main-menu'),
+            backToLevelsBtn: document.getElementById('back-to-levels-btn'),
+            playBtn: document.getElementById('play-btn'),
+            storeBtn: document.getElementById('store-btn'),
+            studentSectionBtn: document.getElementById('student-section-btn'),
+            backToMainMenuFromStudent: document.getElementById('back-to-main-menu-from-student'),
+            resetProgressBtn: document.getElementById('reset-progress-btn'),
+            achievementsBtn: document.getElementById('achievements-btn'),
+            settingsBtn: document.getElementById('settings-btn'),
+            coinBalance: document.getElementById('coin-balance'),
+            explanationBox: document.getElementById('explanation-box'),
+            explanationText: document.getElementById('explanation-text'),
+            correctExplanationDiv: document.getElementById('correct-explanation-div'),
+            incorrectExplanationDiv: document.getElementById('incorrect-explanation-div'),
+            incorrectExplanationText: document.getElementById('incorrect-explanation-text'),
+            followUpDiv: document.getElementById('follow-up-div'),
+            followUpBtn: document.getElementById('follow-up-btn'),
+            modalContainer: document.getElementById('modal-container'),
+            levelResultModal: document.getElementById('level-result-modal'),
+            hintModal: document.getElementById('hint-modal'),
+            confirmModal: document.getElementById('confirm-modal'),
+            analysisModal: document.getElementById('analysis-modal'),
+            achievementsModal: document.getElementById('achievements-modal'),
+            achievementsList: document.getElementById('achievements-list'),
+            closeAchievementsBtn: document.getElementById('close-achievements-btn'),
+            storeModal: document.getElementById('store-modal'),
+            storeItemsList: document.getElementById('store-items-list'),
+            closeStoreBtn: document.getElementById('close-store-btn'),
+            settingsModal: document.getElementById('settings-modal'),
+            closeSettingsBtn: document.getElementById('close-settings-btn'),
+            languageChangeSelect: document.getElementById('language-change-select'),
+            themeChangeSelect: document.getElementById('theme-change-select'),
+            volumeSlider: document.getElementById('volume-slider'),
+            fullscreenBtn: document.getElementById('fullscreen-btn'),
+            modalTitle: document.getElementById('modal-title'),
+            finalScoreEl: document.getElementById('final-score'),
+            modalPercentage: document.getElementById('modal-percentage'),
+            modalStatus: document.getElementById('modal-status'),
+            nextActionBtn: document.getElementById('next-action-btn'),
+            analyzePerformanceBtn: document.getElementById('analyze-performance-btn'),
+            analysisText: document.getElementById('analysis-text'),
+            closeAnalysisBtn: document.getElementById('close-analysis-btn'),
+            hintText: document.getElementById('hint-text'),
+            closeHintBtn: document.getElementById('close-hint-btn'),
+            confirmText: document.getElementById('confirm-text'),
+            confirmOkBtn: document.getElementById('confirm-ok-btn'),
+            confirmCancelBtn: document.getElementById('confirm-cancel-btn'),
+            lifeline5050: document.getElementById('lifeline-5050'),
+            lifeline5050Count: document.getElementById('lifeline-5050-count'),
+            lifelineHint: document.getElementById('lifeline-hint'),
+            lifelineHintCount: document.getElementById('lifeline-hint-count'),
+            streakCounter: document.getElementById('streak-counter'),
+            muteBtn: document.getElementById('mute-btn'),
+            generateQuizBtn: document.getElementById('generate-quiz-btn'),
+            generateBtnText: document.getElementById('generate-btn-text'),
+            generateSpinner: document.getElementById('generate-spinner'),
+            customTopicInput: document.getElementById('custom-topic-input'),
+            dailyChallengeBtn: document.getElementById('daily-challenge-btn'),
+            dailyChallengeDesc: document.getElementById('daily-challenge-desc'),
+            achievementToast: document.getElementById('achievement-toast'),
+            achievementToastName: document.getElementById('achievement-toast-name'),
+            achievementToastCoins: document.getElementById('achievement-toast-coins'),
+            // Student Form DOM
+            studentClassSelect: document.getElementById('student-class-select'),
+            studentCountrySelect: document.getElementById('student-country-select'),
+            studentBoardSelect: document.getElementById('student-board-select'),
+            studentSubjectSelect: document.getElementById('student-subject-select'),
+            studentTopicSelect: document.getElementById('student-topic-select'),
+            studentDifficultySlider: document.getElementById('student-difficulty-slider'),
+            studentDifficultyDisplay: document.getElementById('student-difficulty-display'),
+            studentQuestionCountSelect: document.getElementById('student-question-count-select'),
+            studentStartQuizBtn: document.getElementById('student-start-quiz-btn'),
+            studentStartQuizBtnText: document.getElementById('student-start-quiz-btn-text'),
+            studentStartQuizSpinner: document.getElementById('student-start-quiz-spinner'),
+        };
+
+        // --- Game & Player State ---
+        let gameState = { currentLanguage: 'en', currentLevel: 1, currentQuestionIndex: 0, score: 0, timer: null, nextQuestionTimer: null, timerValue: config.TIME_PER_QUESTION, levelQuestions: [], wronglyAnsweredQuestions: [], streak: 0, isFollowUp: false, isDailyChallenge: false, isStudentQuiz: false };
+        let playerState = {};
+
+        // --- Firebase State ---
+        let app, db, auth, userId;
+        let unsubscribePlayerState = null;
+
+        // --- Audio State ---
+        let audioInitialized = false;
+        let isMuted = false;
+        let correctSound, incorrectSound, bgm, clickSound, levelCompleteSound, levelFailSound, bgmGain;
+
+        // --- Audio Engine ---
+        function initAudio() {
+            if (audioInitialized) return;
+            // Use try-catch for Tone.start() as it can fail in some restricted environments
+            try {
+                Tone.start();
+
+                correctSound = new Tone.Synth({ oscillator: { type: "triangle" }, envelope: { attack: 0.005, decay: 0.1, sustain: 0.3, release: 1 } }).toDestination();
+                incorrectSound = new Tone.Synth({ oscillator: { type: "square" }, envelope: { attack: 0.01, decay: 0.4, sustain: 0.1, release: 1 } }).toDestination();
+                clickSound = new Tone.MembraneSynth().toDestination();
+                levelCompleteSound = new Tone.PolySynth(Tone.Synth).toDestination();
+                levelFailSound = new Tone.PolySynth(Tone.Synth).toDestination();
+
+                bgmGain = new Tone.Gain(0.3).toDestination();
+                if (dom.volumeSlider) dom.volumeSlider.value = 0.3;
+
+                bgm = new Tone.Player({
+                    url: "https://tonejs.github.io/audio/berklee/gong_1.mp3", // Placeholder URL
+                    loop: true,
+                    fadeOut: 0.5
+                }).connect(bgmGain);
+
+                audioInitialized = true;
+                console.log("Audio Initialized");
+            } catch (error) {
+                console.error("Failed to initialize audio:", error);
+                // Optionally disable audio features or notify the user
+                audioInitialized = false; // Ensure it's marked as not initialized
+            }
+        }
+
+        function playBGM(levelNum = 10) { // Default levelNum if not provided
+            if (!audioInitialized || isMuted || bgm.state === 'started') return;
+            const safeLevelNum = typeof levelNum === 'number' ? levelNum : 10; // Ensure levelNum is a number
+            const playbackRate = 1 + (safeLevelNum / config.TOTAL_LEVELS) * 0.5;
+            bgm.playbackRate = Math.max(0.5, Math.min(playbackRate, 2)); // Clamp playback rate
+            try {
+                 if (bgm.loaded) {
+                    bgm.start();
+                 } else {
+                     bgm.load("https://tonejs.github.io/audio/berklee/gong_1.mp3").then(() => bgm.start());
+                 }
+            } catch (error) {
+                console.error("Error playing BGM:", error);
+            }
+        }
+
+        function stopBGM() {
+            if (!audioInitialized || bgm.state !== 'started') return;
+             try {
+                bgm.stop();
+             } catch(error) {
+                 console.error("Error stopping BGM:", error);
+             }
+        }
+
+        function toggleMute() {
+            if (!audioInitialized) return; // Don't allow mute toggle if audio failed
+            isMuted = !isMuted;
+            try {
+                Tone.getDestination().mute = isMuted;
+                dom.muteBtn.innerHTML = `<i class="fas ${isMuted ? 'fa-volume-mute' : 'fa-volume-up'}"></i>`;
+                if(isMuted) {
+                    stopBGM();
+                } else if(dom.quizScreen.classList.contains('flex')) {
+                    playBGM(gameState.currentLevel);
+                }
+            } catch (error) {
+                 console.error("Error toggling mute:", error);
+            }
+        }
+
+        // --- Firebase & State Management ---
+        async function initFirebase() {
+            try {
+                const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : null;
+                if (!firebaseConfig) {
+                    console.warn("Firebase config not found. Game will not save progress. Using localStorage.");
+                    loadPlayerState();
+                    return;
+                }
+
+                app = initializeApp(firebaseConfig);
+                db = getFirestore(app);
+                auth = getAuth(app);
+                setLogLevel('error');
+
+                onAuthStateChanged(auth, user => {
+                    if (user) {
+                        userId = user.uid;
+                        attachPlayerStateListener();
+                    } else {
+                         // Handle user signed out state if necessary
+                        console.log("User signed out or not authenticated.");
+                        userId = null;
+                        if (unsubscribePlayerState) unsubscribePlayerState(); // Detach listener
+                        loadPlayerState(); // Load local state as fallback
+                        // Update UI to reflect signed-out state if needed
+                         if (dom.levelSelectScreen.classList.contains('flex')) {
+                             showLevelSelect(); // Refresh UI based on local state
+                         }
+                    }
+                });
+
+                // Attempt sign-in only if not already signed in
+                if (!auth.currentUser) {
+                    if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
+                        await signInWithCustomToken(auth, __initial_auth_token);
+                    } else {
+                        await signInAnonymously(auth);
+                    }
+                }
+
+            } catch (error) {
+                console.error("Firebase initialization failed:", error);
+                loadPlayerState();
+            }
+        }
+
+        function loadPlayerState() {
+             const stateJSON = localStorage.getItem('lexiconPlayerState');
+             let loadedState = {};
+             try {
+                 if(stateJSON) loadedState = JSON.parse(stateJSON);
+             } catch (e) {
+                 console.error("Corrupted local save data found. Starting with a fresh state.", e);
+                 localStorage.removeItem('lexiconPlayerState');
+             }
+
+             // Ensure default structure is applied correctly
+             const defaultState = {
+                 unlockedLevel: 1, levelData: {}, achievements: [],
+                 dailyChallenge: { date: null, score: 0 }, coins: 0,
+                 correctAnswersInRow: 0, levelsPassedInRow: 0, totalCorrectAnswers: 0,
+                 lifelineCounts: { fiftyFifty: 3, hint: 1 },
+             };
+
+             playerState = { ...defaultState, ...loadedState };
+
+             // Explicitly ensure nested objects exist if loaded state missed them
+             if (!playerState.dailyChallenge) playerState.dailyChallenge = { date: null, score: 0 };
+             if (!playerState.lifelineCounts) playerState.lifelineCounts = { fiftyFifty: 3, hint: 1 };
+             if (!playerState.achievements) playerState.achievements = [];
+             if (!playerState.levelData) playerState.levelData = {};
+
+            console.log("Player state loaded (local fallback):", playerState);
+             updateCoinBalance(); // Update UI immediately after loading local state
+         }
+
+        function attachPlayerStateListener() {
+            if (!userId) {
+                console.error("Cannot attach listener: userId is null.");
+                return;
+            }
+            if (unsubscribePlayerState) unsubscribePlayerState();
+
+            const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
+            const playerDocRef = doc(db, `artifacts/${appId}/users/${userId}/gameState/data`);
+
+            unsubscribePlayerState = onSnapshot(playerDocRef, (doc) => {
+                const defaultState = {
+                    unlockedLevel: 1, levelData: {}, achievements: [],
+                    dailyChallenge: { date: null, score: 0 }, coins: 0,
+                    correctAnswersInRow: 0, levelsPassedInRow: 0, totalCorrectAnswers: 0,
+                    lifelineCounts: { fiftyFifty: 3, hint: 1 },
+                };
+
+                if (doc.exists()) {
+                    const data = doc.data();
+                    playerState = { ...defaultState, ...data };
+                    // Explicitly ensure nested objects exist if Firestore data missed them
+                     if (!playerState.dailyChallenge) playerState.dailyChallenge = { date: null, score: 0 };
+                     if (!playerState.lifelineCounts) playerState.lifelineCounts = { fiftyFifty: 3, hint: 1 };
+                     if (!playerState.achievements) playerState.achievements = [];
+                     if (!playerState.levelData) playerState.levelData = {};
+                     console.log("Player state updated from Firestore:", playerState);
+
+                } else {
+                    console.log("No player data found in Firestore, creating new document.");
+                    playerState = defaultState;
+                    savePlayerState(); // Create the initial document
+                }
+
+                // Update relevant UI elements
+                 updateCoinBalance(); // Crucial to update coins displayed
+                 if (dom.levelSelectScreen.classList.contains('flex')) {
+                    showLevelSelect(); // Redraw levels based on potentially updated unlockedLevel
+                }
+                if (dom.quizScreen.classList.contains('flex')) {
+                    updateLifelineCounts(); // Update lifeline counts if in quiz
+                }
+            }, (error) => {
+                console.error("Error listening to player state:", error);
+                alert("Error connecting to save data. Progress might not be saved online. Using local backup.");
+                loadPlayerState(); // Fallback to local storage if listener fails
+            });
+        }
+
+
+        async function savePlayerState() {
+            console.log("Attempting to save state:", playerState); // Log state before saving
+            if (!userId) {
+                console.warn("No user ID, saving to localStorage.");
+                localStorage.setItem('lexiconPlayerState', JSON.stringify(playerState));
+                return;
+            }
+            try {
+                const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
+                const playerDocRef = doc(db, `artifacts/${appId}/users/${userId}/gameState/data`);
+                 // Use setDoc with merge: true to avoid overwriting fields unintentionally
+                 // Note: Firestore automatically handles nested objects correctly with merge
+                await setDoc(playerDocRef, playerState, { merge: true });
+                console.log("Player state saved to Firestore.");
+            } catch (error) {
+                console.error("Error saving player state to Firestore:", error);
+                alert("Error saving progress online. Saving locally as backup.");
+                localStorage.setItem('lexiconPlayerState', JSON.stringify(playerState)); // Fallback save
+            }
+        }
+
+        function getLevelData(levelNum) {
+            // Ensure levelData exists
+            return playerState.levelData?.[levelNum] || { highScore: 0 };
+        }
+
+        // --- Gemini API ---
+         async function generateGeminiText(prompt, isJson = false) {
+            if (apiKey === "PASTE_YOUR_GEMINI_API_KEY_HERE" || !apiKey) {
+                console.error("Gemini API Key is missing or invalid.");
+                alert("Developer Error: Gemini API Key is missing or invalid. Please add your API key to the script to use AI features.");
+                return null;
+            }
+
+             const model = 'gemini-1.5-flash-latest'; // Use the correct model name
+            const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
+
+             console.log("Sending prompt to Gemini:", prompt); // Log the prompt
+
+            const payload = {
+                contents: [{ parts: [{ text: prompt }] }],
+                 // Add safety settings if needed, otherwise rely on defaults
+                 // safetySettings: [ ... ],
+                ...(isJson && {
+                    generationConfig: {
+                        responseMimeType: "application/json",
+                    }
+                })
+            };
+
+            let response;
+            try {
+                response = await fetch(apiUrl, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+
+                const responseData = await response.json(); // Always parse JSON response
+
+                if (!response.ok) {
+                    // Log detailed error from API response
+                    console.error(`API call failed with status: ${response.status}. Response:`, JSON.stringify(responseData, null, 2));
+                    throw new Error(`API call failed: ${responseData?.error?.message || response.status}`);
+                }
+
+                 // More robust checking, including finishReason
+                 if (!responseData || !responseData.candidates || responseData.candidates.length === 0) {
+                     console.error("Invalid response structure - no candidates:", responseData);
+                    throw new Error("Invalid API response: No candidates found.");
+                 }
+
+                 const candidate = responseData.candidates[0];
+
+                 if (candidate.finishReason && candidate.finishReason !== "STOP") {
+                     console.warn(`API call finished with reason: ${candidate.finishReason}. Safety ratings:`, candidate.safetyRatings);
+                     // Optionally handle specific reasons like SAFETY differently
+                     if (candidate.finishReason === "SAFETY") {
+                         throw new Error("Content generation blocked due to safety settings.");
+                     }
+                 }
+
+
+                 if (!candidate.content || !candidate.content.parts || candidate.content.parts.length === 0 || !candidate.content.parts[0].text) {
+                     console.error("Invalid response structure - missing text content:", responseData);
+                     throw new Error("Invalid API response: Missing text content.");
+                 }
+                const text = candidate.content.parts[0].text;
+                 console.log("Received text from Gemini:", text); // Log successful response text
+                return text;
+
+            } catch (error) {
+                console.error("Gemini API Error:", error);
+                alert(`An error occurred while communicating with the AI: ${error.message}. Please check the console.`);
+                return null;
+            }
+        }
+
+        async function generateQuizJSON(topic, numQuestions) {
+            if (apiKey === "PASTE_YOUR_GEMINI_API_KEY_HERE" || !apiKey) {
+                console.error("Gemini API Key is missing or invalid.");
+                alert("Developer Error: Gemini API Key is missing or invalid. Please add your API key to the script to use AI features.");
+                return null;
+            }
+
+            const currentLangName = languages[gameState.currentLanguage] || 'English'; // Get language name
+
+            const schema = {
+                 type: "OBJECT",
+                 properties: {
+                     questions: {
+                         type: "ARRAY",
+                         description: `An array of exactly ${numQuestions} quiz questions.`,
+                         items: {
+                             type: "OBJECT",
+                             properties: {
+                                 question: { type: "STRING", description: `The question text in ${currentLangName}.` },
+                                 options: { type: "ARRAY", description: `An array of exactly 4 possible answer strings in ${currentLangName}.` , items: { type: "STRING" } },
+                                 answer: { type: "STRING", description: `The correct answer string, which MUST be one of the strings provided in the 'options' array. Ensure it is in ${currentLangName}.` },
+                                 explanation: { type: "STRING", description: `A brief explanation for the correct answer in ${currentLangName}.` },
+                             },
+                             required: ["question", "options", "answer", "explanation"]
+                         }
+                     }
+                 },
+                 required: ["questions"]
+             };
+
+            // Enhanced prompt with explicit language instruction
+            const prompt = `Generate a ${numQuestions}-question multiple-choice quiz based on the following criteria.
+            IMPORTANT: The quiz (questions, options, answer, explanation) MUST be generated entirely in the language: ${currentLangName}.
+            Topic/Criteria: "${topic}".
+            Ensure each question has exactly 4 options.
+            Ensure the 'answer' field for each question exactly matches one of the strings in its 'options' array.
+            Provide a brief 'explanation' for each answer.
+            Output ONLY the valid JSON object adhering strictly to the provided schema. Do not include any introductory text, markdown formatting (like \`\`\`json), or concluding remarks outside the JSON structure.`;
+
+
+            const payload = {
+                contents: [{ parts: [{ text: prompt }] }],
+                generationConfig: {
+                    responseMimeType: "application/json",
+                    responseSchema: schema
+                }
+                 // Add safety settings if needed
+            };
+
+            const model = 'gemini-1.5-flash-latest';
+            const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
+            console.log("Sending quiz generation prompt:", prompt); // Log prompt
+
+            try {
+                 const response = await fetch(apiUrl, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+
+                const responseData = await response.json(); // Always parse response
+
+                if (!response.ok) {
+                    console.error(`API Error generating quiz JSON: ${response.status}. Response:`, JSON.stringify(responseData, null, 2));
+                    throw new Error(`API Error: ${responseData?.error?.message || response.status}`);
+                 }
+
+                 if (!responseData || !responseData.candidates || responseData.candidates.length === 0) {
+                     console.error("Invalid quiz JSON response - no candidates:", responseData);
+                     throw new Error("Invalid API response: No candidates found.");
+                 }
+                 const candidate = responseData.candidates[0];
+
+                 if (candidate.finishReason && candidate.finishReason !== "STOP") {
+                     console.warn(`Quiz generation finished with reason: ${candidate.finishReason}. Safety ratings:`, candidate.safetyRatings);
+                      if (candidate.finishReason === "SAFETY") {
+                         throw new Error("Quiz generation blocked due to safety settings.");
+                     }
+                      // Handle other reasons if necessary, maybe retry or return null
+                      // For now, treat unexpected finish reasons as errors for quiz generation
+                      throw new Error(`Quiz generation finished unexpectedly: ${candidate.finishReason}`);
+                 }
+
+                 if (!candidate.content || !candidate.content.parts || candidate.content.parts.length === 0 || !candidate.content.parts[0].text) {
+                     console.error("Invalid quiz JSON response - missing text content:", responseData);
+                     throw new Error("Invalid API response: Missing text content.");
+                 }
+
+
+                const jsonText = candidate.content.parts[0].text;
+                 console.log("Received raw JSON text:", jsonText); // Log raw text
+
+                let parsed;
+                 try {
+                     parsed = JSON.parse(jsonText);
+                 } catch (parseError) {
+                      console.error("Failed to parse JSON response:", parseError, "\nRaw text:", jsonText);
+                      throw new Error("Failed to parse AI response as valid JSON.");
+                 }
+
+                // Robust validation
+                if (!parsed.questions || !Array.isArray(parsed.questions) || parsed.questions.length === 0) {
+                     console.error("Generated JSON is not a valid quiz structure (missing or empty 'questions' array):", parsed);
+                    throw new Error("Generated JSON is not a valid quiz structure.");
+                }
+                 if (parsed.questions.length !== numQuestions) {
+                      console.warn(`Requested ${numQuestions} questions, but received ${parsed.questions.length}. Using received questions.`);
+                     // Allow proceeding with the received number, but log a warning.
+                 }
+
+                // Validate each question more thoroughly
+                parsed.questions.forEach((q, index) => {
+                     const questionNum = index + 1;
+                    if (!q.question || typeof q.question !== 'string') throw new Error(`Question ${questionNum}: Missing or invalid 'question' text.`);
+                    if (!q.options || !Array.isArray(q.options) || q.options.length !== 4) throw new Error(`Question ${questionNum}: 'options' must be an array of exactly 4 strings.`);
+                    q.options.forEach((opt, optIndex) => { if (typeof opt !== 'string') throw new Error(`Question ${questionNum}, Option ${optIndex + 1}: Option must be a string.`); });
+                    if (!q.answer || typeof q.answer !== 'string') throw new Error(`Question ${questionNum}: Missing or invalid 'answer' text.`);
+                    if (!q.options.includes(q.answer)) {
+                         console.error(`Question ${questionNum}: Answer "${q.answer}" not found in options:`, q.options);
+                        throw new Error(`Question ${questionNum}: Answer is not present in the options array.`);
+                    }
+                     if (!q.explanation || typeof q.explanation !== 'string') throw new Error(`Question ${questionNum}: Missing or invalid 'explanation' text.`);
+                });
+
+                 console.log("Successfully parsed and validated quiz JSON:", parsed.questions);
+                return parsed.questions;
+
+            } catch (error) {
+                console.error("Error in generateQuizJSON function:", error);
+                 alert(`An error occurred while generating the quiz: ${error.message}. Please try again or check the console.`);
+                return null;
+            }
+        }
+
+        async function generateSingleQuestionJSON(originalQuestion, correctAnswer) {
+            if (apiKey === "PASTE_YOUR_GEMINI_API_KEY_HERE" || !apiKey) {
+                console.error("Gemini API Key is missing or invalid.");
+                alert("Developer Error: Gemini API Key is missing or invalid. Please add your API key to the script to use AI features.");
+                return null;
+            }
+
+            const currentLangName = languages[gameState.currentLanguage] || 'English';
+
+            const schema = {
+                 type: "OBJECT",
+                 properties: {
+                     question: { type: "STRING", description: `The question text in ${currentLangName}.` },
+                     options: { type: "ARRAY", description: `An array of exactly 4 possible answer strings in ${currentLangName}.` , items: { type: "STRING" } },
+                     answer: { type: "STRING", description: `The correct answer string, which MUST be one of the strings provided in the 'options' array. Ensure it is in ${currentLangName}.` },
+                     explanation: { type: "STRING", description: `A brief explanation for the correct answer in ${currentLangName}.` },
+                 },
+                 required: ["question", "options", "answer", "explanation"]
+             };
+
+             // Enhanced prompt
+            const prompt = `Generate ONE new multiple-choice question that is related to, but different from, this original question: "${originalQuestion}" (where the answer was "${correctAnswer}").
+            IMPORTANT: The new question (question, options, answer, explanation) MUST be generated entirely in the language: ${currentLangName}.
+            Ensure the new question has exactly 4 options.
+            Ensure the 'answer' field exactly matches one of the strings in its 'options' array.
+            Provide a brief 'explanation' for the answer.
+             Output ONLY the valid JSON object adhering strictly to the provided schema. Do not include any introductory text, markdown formatting (like \`\`\`json), or concluding remarks outside the JSON structure.`;
+
+            const payload = {
+                contents: [{ parts: [{ text: prompt }] }],
+                 generationConfig: {
+                    responseMimeType: "application/json",
+                    responseSchema: schema
+                }
+                 // Add safety settings if needed
+            };
+
+            const model = 'gemini-1.5-flash-latest';
+            const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
+             console.log("Sending single question prompt:", prompt); // Log prompt
+
+
+             try {
+                const response = await fetch(apiUrl, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+
+                 const responseData = await response.json(); // Always parse response
+
+                if (!response.ok) {
+                    console.error(`API Error generating single question: ${response.status}. Response:`, JSON.stringify(responseData, null, 2));
+                    throw new Error(`API Error: ${responseData?.error?.message || response.status}`);
+                 }
+
+                 if (!responseData || !responseData.candidates || responseData.candidates.length === 0) {
+                     console.error("Invalid single question response - no candidates:", responseData);
+                     throw new Error("Invalid API response: No candidates found.");
+                 }
+                 const candidate = responseData.candidates[0];
+
+                 if (candidate.finishReason && candidate.finishReason !== "STOP") {
+                     console.warn(`Single question generation finished with reason: ${candidate.finishReason}. Safety ratings:`, candidate.safetyRatings);
+                      if (candidate.finishReason === "SAFETY") {
+                         throw new Error("Content generation blocked due to safety settings.");
+                     }
+                      throw new Error(`Single question generation finished unexpectedly: ${candidate.finishReason}`);
+                 }
+
+                 if (!candidate.content || !candidate.content.parts || candidate.content.parts.length === 0 || !candidate.content.parts[0].text) {
+                     console.error("Invalid single question response - missing text content:", responseData);
+                     throw new Error("Invalid API response: Missing text content.");
+                 }
+
+
+                const jsonText = candidate.content.parts[0].text;
+                 console.log("Received raw single question JSON text:", jsonText);
+
+                let parsed;
+                 try {
+                     parsed = JSON.parse(jsonText);
+                 } catch (parseError) {
+                      console.error("Failed to parse single question JSON response:", parseError, "\nRaw text:", jsonText);
+                      throw new Error("Failed to parse AI response as valid JSON.");
+                 }
+
+
+                // Add validation
+                 if (!parsed.question || typeof parsed.question !== 'string') throw new Error(`Generated Question: Missing or invalid 'question' text.`);
+                 if (!parsed.options || !Array.isArray(parsed.options) || parsed.options.length !== 4) throw new Error(`Generated Question: 'options' must be an array of exactly 4 strings.`);
+                 parsed.options.forEach((opt, optIndex) => { if (typeof opt !== 'string') throw new Error(`Generated Question, Option ${optIndex + 1}: Option must be a string.`); });
+                 if (!parsed.answer || typeof parsed.answer !== 'string') throw new Error(`Generated Question: Missing or invalid 'answer' text.`);
+                 if (!parsed.options.includes(parsed.answer)) {
+                    console.error(`Generated Question: Answer "${parsed.answer}" not found in options:`, parsed.options);
+                    throw new Error(`Generated Question: Answer is not present in the options array.`);
+                 }
+                 if (!parsed.explanation || typeof parsed.explanation !== 'string') throw new Error(`Generated Question: Missing or invalid 'explanation' text.`);
+
+                 console.log("Successfully parsed and validated single question JSON:", parsed);
+                return parsed;
+
+            } catch (error) {
+                console.error("Error in generateSingleQuestionJSON function:", error);
+                 alert(`An error occurred while generating the follow-up question: ${error.message}. Please check the console.`);
+                return null;
+            }
+        }
+
+        // --- Core Game Logic ---
+        async function getQuestionsForLevel(levelNum) {
+            const lang = gameState.currentLanguage;
+             // Check for hardcoded questions first (only English level 1 & 2 in this example)
+            if (allQuestions[lang] && allQuestions[lang][levelNum]) {
+                 console.log(`Using hardcoded questions for Level ${levelNum}, Language ${lang}.`);
+                return JSON.parse(JSON.stringify(allQuestions[lang][levelNum]));
+            }
+            // Fallback: Generate questions if they don't exist
+            console.log(`No hardcoded questions for Level ${levelNum} in ${lang}, generating via API...`);
+            const topic = `General Knowledge suitable for Quiz Level ${levelNum} (out of ${config.TOTAL_LEVELS}, higher is harder)`;
+            return await generateQuizJSON(topic, config.QUESTIONS_PER_LEVEL);
+        }
+
+        async function startLevel(levelNum, customQuestions = null, isStudentQuiz = false) {
+            if (!audioInitialized) initAudio();
+            playBGM(levelNum === 'Daily' || levelNum === 'Student Quiz' || typeof levelNum !== 'number' ? 10 : levelNum);
+
+            let questions = customQuestions;
+            if (!questions) {
+                questions = await getQuestionsForLevel(levelNum);
+                if(!questions) {
+                    // Alert is now handled within the generation function if API key is missing or API fails
+                    // alert("Failed to load or generate questions for this level. Please try again.");
+                    stopBGM();
+                     if (dom.quizScreen.classList.contains('flex')) {
+                        showLevelSelect(); // Go back if already in quiz screen
+                    }
+                    return;
+                }
+            }
+
+            gameState.currentLevel = levelNum;
+            gameState.currentQuestionIndex = 0;
+            gameState.score = 0;
+            gameState.streak = 0;
+            gameState.levelQuestions = questions;
+            gameState.wronglyAnsweredQuestions = [];
+            gameState.isFollowUp = false;
+            gameState.isDailyChallenge = (customQuestions && levelNum === 'Daily');
+            gameState.isStudentQuiz = isStudentQuiz;
+
+            resetQuestionState();
+            updateScoreDisplay();
+            updateStreakCounter();
+            updateLifelineCounts();
+             // Display level number or topic name
+            dom.currentLevelDisplay.textContent = typeof levelNum === 'number' ? levelNum : (levelNum || 'Quiz');
+            showScreen('quiz-screen');
+            showNextQuestion();
+        }
+
+        function showNextQuestion(isFollowUp = false) {
+            resetQuestionState();
+            gameState.isFollowUp = isFollowUp;
+
+            if (gameState.currentQuestionIndex >= gameState.levelQuestions.length) {
+                endLevel();
+                return;
+            }
+
+            const questionData = gameState.levelQuestions[gameState.currentQuestionIndex];
+            if (!questionData || !questionData.question || !questionData.options || !Array.isArray(questionData.options) || questionData.options.length !== 4 || !questionData.answer) {
+                 console.error("Invalid or incomplete question data encountered:", questionData, "at index:", gameState.currentQuestionIndex);
+                 alert("Error: Encountered an invalid question. Skipping to the next or ending level.");
+                 gameState.currentQuestionIndex++; // Try skipping
+                 if (gameState.currentQuestionIndex >= gameState.levelQuestions.length) {
+                    endLevel();
+                 } else {
+                     showNextQuestion(isFollowUp); // Try again with the next question
+                 }
+                 return;
+            }
+
+            dom.questionTextEl.textContent = questionData.question;
+
+            // Create answer buttons
+            questionData.options.forEach(optionText => {
+                const button = document.createElement('button');
+                 // Sanitize or ensure text content is handled safely if needed, though usually fine for options
+                button.textContent = optionText;
+                button.className = "btn w-full bg-black bg-opacity-20 hover:bg-opacity-40 border-2 border-gray-600 p-4 rounded-lg text-lg font-semibold";
+                button.addEventListener('click', (e) => selectAnswer(e, isFollowUp));
+                dom.answersBoxEl.appendChild(button);
+            });
+
+            startTimer(isFollowUp);
+        }
+
+        async function selectAnswer(e, isFollowUp = false) {
+            clearInterval(gameState.timer);
+            const selectedButton = e.target;
+            const selectedAnswer = selectedButton.textContent; // Assume textContent is reliable
+            const questionData = gameState.levelQuestions[gameState.currentQuestionIndex];
+
+             if (!questionData || !questionData.answer) {
+                console.error("Cannot select answer: questionData is invalid.", questionData);
+                alert("An error occurred processing this question.");
+                goToNextQuestion();
+                return;
+            }
+            const correctAnswer = questionData.answer;
+
+            // Disable all buttons
+            Array.from(dom.answersBoxEl.children).forEach(btn => btn.disabled = true);
+
+            if (selectedAnswer === correctAnswer) {
+                if(correctSound) try { correctSound.triggerAttackRelease("C5", "8n"); } catch(e){ console.warn("Audio error:", e); }
+                selectedButton.classList.add('correct');
+                if (!isFollowUp) {
+                    gameState.score++;
+                    gameState.streak++;
+                    playerState.correctAnswersInRow = (playerState.correctAnswersInRow || 0) + 1; // Ensure exists
+                    playerState.totalCorrectAnswers = (playerState.totalCorrectAnswers || 0) + 1; // Ensure exists
+                    addCoins(config.COINS_PER_CORRECT_ANSWER);
+                    checkAchievement('streaker');
+                    checkAchievement('quiz_novice');
+                }
+            } else {
+                 if(incorrectSound) try { incorrectSound.triggerAttackRelease("C3", "4n"); } catch(e){ console.warn("Audio error:", e); }
+                selectedButton.classList.add('incorrect');
+                if (!isFollowUp) {
+                    gameState.streak = 0;
+                    playerState.correctAnswersInRow = 0;
+                     // Ensure wronglyAnsweredQuestions exists
+                    if (!gameState.wronglyAnsweredQuestions) gameState.wronglyAnsweredQuestions = [];
+                    gameState.wronglyAnsweredQuestions.push({
+                        question: questionData.question,
+                        yourAnswer: selectedAnswer,
+                        correctAnswer: correctAnswer
+                    });
+                }
+                // Highlight correct answer
+                Array.from(dom.answersBoxEl.children).forEach(btn => {
+                    if (btn.textContent === correctAnswer) {
+                        btn.classList.add('correct');
+                    }
+                });
+            }
+
+            updateScoreDisplay();
+            updateStreakCounter();
+            await fetchExplanations(selectedAnswer !== correctAnswer ? selectedAnswer : null, isFollowUp);
+            goToNextQuestion();
+        }
+
+        function endLevel() {
+            stopBGM();
+            const totalQuestions = gameState.levelQuestions?.length || 0;
+            const percentage = totalQuestions > 0 ? Math.round((gameState.score / totalQuestions) * 100) : 0;
+            const passed = percentage >= config.PASS_PERCENTAGE;
+
+            dom.finalScoreEl.textContent = `${gameState.score}/${totalQuestions}`;
+            dom.modalPercentage.querySelector('span').textContent = `${percentage}%`;
+
+            // Default button action is to go back to level select
+             let nextActionText = 'Back to Levels';
+             let nextActionHandler = () => {
+                 dom.modalContainer.classList.add('hidden');
+                 showLevelSelect();
+            };
+
+            if (gameState.isDailyChallenge) {
+                 dom.modalTitle.textContent = "Daily Challenge Complete!";
+                 const today = new Date().toISOString().slice(0, 10);
+                 const oldHighScore = playerState.dailyChallenge?.score || 0;
+                 if (gameState.score > oldHighScore) {
+                     playerState.dailyChallenge = { date: today, score: gameState.score };
+                     dom.modalStatus.textContent = `New High Score!`;
+                 } else {
+                     dom.modalStatus.textContent = `Today's High Score: ${oldHighScore}`;
+                 }
+                  // Next action remains default (Back to Levels)
+                 dom.analyzePerformanceBtn.classList.add('hidden');
+
+            } else if (gameState.isStudentQuiz) {
+                dom.modalTitle.textContent = "Practice Complete!";
+                dom.modalStatus.textContent = `You scored ${percentage}%!`;
+                nextActionText = 'Back to Student Section'; // Change button text
+                nextActionHandler = () => { // Change handler
+                    dom.modalContainer.classList.add('hidden');
+                    showStudentSection();
+                };
+                 // Show analysis only if answers were wrong
+                 dom.analyzePerformanceBtn.classList.toggle('hidden', gameState.wronglyAnsweredQuestions.length === 0);
+
+            } else if (gameState.isFollowUp) {
+                 dom.modalTitle.textContent = "Hope that helped!";
+                 dom.modalStatus.textContent = "You can ask another, or return to the levels.";
+                 // Next action remains default (Back to Levels)
+                 dom.analyzePerformanceBtn.classList.add('hidden');
+            }
+            else { // Regular Level or Custom Quiz
+                const isRegularLevel = typeof gameState.currentLevel === 'number';
+                dom.modalTitle.textContent = passed
+                    ? `${isRegularLevel ? `Level ${gameState.currentLevel}` : 'Quiz'} Complete!`
+                    : `${isRegularLevel ? `Level ${gameState.currentLevel}` : 'Quiz'} Failed`;
+
+                 dom.modalStatus.textContent = passed ? (isRegularLevel ? '🎉 UNLOCKED NEXT LEVEL 🎉' : '🎉 Well Done! 🎉') : 'Better luck next time!';
+
+                if(passed) {
+                    if(levelCompleteSound) try { levelCompleteSound.triggerAttackRelease(["C4", "E4", "G4"], "4n"); } catch(e){ console.warn("Audio error:", e); }
+                } else {
+                    if(levelFailSound) try { levelFailSound.triggerAttackRelease(["C3", "D#3", "G3"], "4n"); } catch(e){ console.warn("Audio error:", e); }
+                }
+
+                 if (isRegularLevel) {
+                    if (passed) {
+                         nextActionText = 'Next Level';
+                         nextActionHandler = () => {
+                            dom.modalContainer.classList.add('hidden');
+                            startLevel(gameState.currentLevel + 1);
+                        };
+                    } else {
+                        nextActionText = 'Retry Level';
+                         nextActionHandler = () => {
+                            dom.modalContainer.classList.add('hidden');
+                            startLevel(gameState.currentLevel);
+                        };
+                    }
+                }
+                 // Else (Custom Quiz), next action remains default (Back to Levels)
+
+                if (passed) {
+                    if (isRegularLevel) {
+                        playerState.levelsPassedInRow = (playerState.levelsPassedInRow || 0) + 1;
+                         if (gameState.currentLevel >= playerState.unlockedLevel) {
+                             playerState.unlockedLevel = gameState.currentLevel + 1;
+                         }
+                         checkAchievement('on_a_roll');
+                         checkAchievement('untouchable');
+                         checkAllAchievements();
+                    }
+                    if (percentage === 100) checkAchievement('perfecto');
+                    addCoins(config.COINS_PER_LEVEL_COMPLETE);
+                    dom.analyzePerformanceBtn.classList.add('hidden');
+                } else {
+                    if (isRegularLevel) playerState.levelsPassedInRow = 0;
+                     dom.analyzePerformanceBtn.classList.toggle('hidden', gameState.wronglyAnsweredQuestions.length === 0);
+                }
+            }
+
+             // Apply the determined text and handler
+             dom.nextActionBtn.textContent = nextActionText;
+             dom.nextActionBtn.onclick = nextActionHandler;
+
+            savePlayerState(); // Save state at the end of any quiz/level attempt
+            showModal(dom.levelResultModal);
+        }
+
+
+        // --- UI, Utility, & New Feature Functions ---
+        function showScreen(screenId) {
+            const screens = [dom.startScreen, dom.mainMenuScreen, dom.levelSelectScreen, dom.quizScreen, dom.studentSectionScreen];
+            screens.forEach(screen => {
+                if (!screen) return; // Add null check for safety
+                if (screen.id === screenId) {
+                    screen.classList.remove('hidden');
+                    if (['main-menu-screen', 'level-select-screen', 'quiz-screen', 'student-section-screen'].includes(screenId)) {
+                        screen.classList.add('flex'); // Ensure flex display for main sections
+                    }
+                } else {
+                    screen.classList.add('hidden');
+                    screen.classList.remove('flex'); // Remove flex when hidden
+                }
+            });
+             console.log("Showing screen:", screenId); // Log screen changes
+        }
+
+
+        async function init() {
+            // Initial API Key Check - moved here for earlier execution
+            if (apiKey === "PASTE_YOUR_GEMINI_API_KEY_HERE" || !apiKey) {
+                 alert("Welcome! To enable AI-powered quiz generation (Custom Quiz, Student Section, Daily Challenge, and non-English levels), please paste your Google Gemini API key into the 'apiKey' variable near the top of the script. You can get a key from Google AI Studio.");
+            }
+
+            await initFirebase(); // Handles initial state loading (Firestore or local)
+
+            // Populate language buttons only once
+            if(dom.languageSelectionContainer.childElementCount === 0) {
+                 Object.keys(languages).forEach(langCode => {
+                     const button = document.createElement('button');
+                     button.textContent = languages[langCode];
+                     button.dataset.lang = langCode;
+                     button.className = 'btn bg-blue-500 hover:bg-blue-600 text-white font-bold py-3 px-6 rounded-lg text-lg';
+                     button.addEventListener('click', selectLanguage);
+                     dom.languageSelectionContainer.appendChild(button);
+                 });
+            }
+
+            showScreen('start-screen');
+            initAudio(); // Initialize audio after showing the first screen to allow user interaction
+        }
+
+        function selectLanguage(e) {
+            // initAudio(); // Audio should already be init by now from init()
+            gameState.currentLanguage = e.target.dataset.lang;
+            console.log(`Language selected: ${gameState.currentLanguage}`);
+            showScreen('main-menu-screen');
+        }
+
+        function showLevelSelect() {
+            stopBGM();
+            updateCoinBalance();
+
+            const today = new Date().toISOString().slice(0, 10);
+            if (playerState.dailyChallenge && playerState.dailyChallenge.date === today) {
+                dom.dailyChallengeBtn.disabled = true;
+                dom.dailyChallengeDesc.textContent = `Completed! High Score: ${playerState.dailyChallenge.score || 0}/${config.DAILY_CHALLENGE_QUESTIONS}`;
+                dom.dailyChallengeBtn.classList.add('opacity-50', 'cursor-not-allowed');
+            } else {
+                dom.dailyChallengeBtn.disabled = false;
+                dom.dailyChallengeDesc.textContent = `A unique 15-question quiz. New challenge every day!`;
+                dom.dailyChallengeBtn.classList.remove('opacity-50', 'cursor-not-allowed');
+            }
+
+            dom.levelGrid.innerHTML = ''; // Clear previous buttons
+            const unlockedLevel = playerState.unlockedLevel || 1; // Default to 1 if undefined
+
+            for (let i = 1; i <= config.TOTAL_LEVELS; i++) {
+                const button = document.createElement('button');
+                button.dataset.level = i;
+                button.className = 'level-btn btn text-lg font-bold p-4 rounded-lg flex items-center justify-center aspect-square'; // Added aspect-square for consistency
+
+                const milestoneId = milestoneAchievements[i];
+                const isMilestone = !!milestoneId;
+                const isUnlocked = i <= unlockedLevel;
+                const hasCompletedMilestone = isMilestone && (playerState.achievements || []).includes(milestoneId);
+
+
+                if (isUnlocked) {
+                    const achievement = isMilestone ? achievements[milestoneId] : null;
+                    if (hasCompletedMilestone && achievement) {
+                        button.innerHTML = `<i class="fas ${achievement.icon} text-xl ${achievement.color}"></i>`;
+                        // Determine hover color based on original color
+                        const bgColorClass = achievement.bgColor || 'bg-purple-600';
+                        const hoverBgClass = bgColorClass.includes('900') ? bgColorClass : (bgColorClass.includes('800') ? bgColorClass.replace('800', '900') : bgColorClass.replace('600', '700'));
+                        button.classList.add(bgColorClass, `hover:${hoverBgClass}`);
+                        button.title = achievement.title;
+                    } else {
+                        button.innerHTML = `<span>${i}</span>`;
+                        button.classList.add('bg-purple-600', 'hover:bg-purple-700');
+                         if (isMilestone && achievement) button.title = `Level ${i} - ${achievement.title}`; // Title for uncompleted milestone
+                         else button.title = `Level ${i}`;
+                    }
+                    button.addEventListener('click', () => startLevel(i));
+                } else { // LOCKED
+                    button.classList.add('locked');
+                    button.disabled = true;
+                    if (isMilestone) {
+                        const achievement = achievements[milestoneId];
+                         if (achievement) {
+                             button.innerHTML = `<i class="fas ${achievement.icon} text-xl"></i>`;
+                             button.title = achievement.title + " (Locked)";
+                         } else {
+                            button.innerHTML = `<i class="fas fa-lock"></i>`; // Fallback lock icon
+                         }
+                    } else {
+                        button.innerHTML = `<i class="fas fa-lock"></i>`;
+                    }
+                }
+                dom.levelGrid.appendChild(button);
+            }
+            showScreen('level-select-screen');
+        }
+
+        // --- Student Section Functions ---
+        function showStudentSection() {
+            showScreen('student-section-screen');
+            if (dom.studentCountrySelect.options.length <= 1) {
+                populateCountries();
+            }
+            resetStudentForm(); // Reset form each time it's shown
+        }
+
+        function populateCountries() {
+            dom.studentCountrySelect.innerHTML = '<option value="">Select your country</option>';
+            countries.forEach(country => {
+                dom.studentCountrySelect.add(new Option(country, country));
+            });
+        }
+
+        function populateBoards() {
+            const country = dom.studentCountrySelect.value;
+            const boards = (countryData[country] || countryData["Default"])?.boards || []; // Add safety check
+            dom.studentBoardSelect.innerHTML = '<option value="">Select board/curriculum</option>';
+            boards.forEach(board => {
+                dom.studentBoardSelect.add(new Option(board, board));
+            });
+            dom.studentBoardSelect.disabled = !country; // Disable if no country selected
+        }
+
+        function populateSubjects() {
+            const sClass = dom.studentClassSelect.value;
+            const subjects = subjectData[sClass] || [];
+            dom.studentSubjectSelect.innerHTML = '<option value="">Select subject</option>';
+            subjects.forEach(subject => {
+                dom.studentSubjectSelect.add(new Option(subject, subject));
+            });
+            dom.studentSubjectSelect.disabled = !sClass;
+             // Reset topics when subject changes
+            dom.studentTopicSelect.innerHTML = '<option value="">Select subject first</option>';
+            dom.studentTopicSelect.disabled = true;
+        }
+
+        function populateTopics() {
+            const subject = dom.studentSubjectSelect.value;
+            const topics = topicData[subject] || topicData["Default"] || []; // Add safety check
+            dom.studentTopicSelect.innerHTML = '<option value="">Select topic (optional)</option>';
+            topics.forEach(topic => {
+                dom.studentTopicSelect.add(new Option(topic, topic));
+            });
+            dom.studentTopicSelect.disabled = !subject; // Disable if no subject selected
+        }
+
+        function resetStudentForm() {
+            if(dom.studentNameInput) dom.studentNameInput.value = ""; // Reset name input too
+            dom.studentClassSelect.value = "";
+            dom.studentCountrySelect.value = "";
+            dom.studentBoardSelect.innerHTML = '<option value="">Select country first</option>';
+            dom.studentBoardSelect.disabled = true;
+            dom.studentSubjectSelect.innerHTML = '<option value="">Select class first</option>';
+            dom.studentSubjectSelect.disabled = true;
+            dom.studentTopicSelect.innerHTML = '<option value="">Select subject first</option>';
+            dom.studentTopicSelect.disabled = true;
+            dom.studentDifficultySlider.value = 5;
+            dom.studentDifficultyDisplay.textContent = '5';
+            dom.studentQuestionCountSelect.value = "10";
+            // Ensure button is reset
+             dom.studentStartQuizBtnText.classList.remove('hidden');
+             dom.studentStartQuizSpinner.classList.add('hidden');
+             dom.studentStartQuizBtn.disabled = false;
+        }
+
+        async function handleStartStudentQuiz() {
+            const sClass = dom.studentClassSelect.value;
+            const country = dom.studentCountrySelect.value;
+            const board = dom.studentBoardSelect.value;
+            const subject = dom.studentSubjectSelect.value;
+            const topic = dom.studentTopicSelect.value;
+            const difficulty = dom.studentDifficultySlider.value;
+            const numQuestions = parseInt(dom.studentQuestionCountSelect.value, 10);
+
+            if (!sClass || !country || !board || !subject) {
+                alert("Please fill in all required fields: Class, Country, Board, and Subject.");
+                return;
+            }
+
+            dom.studentStartQuizBtnText.classList.add('hidden');
+            dom.studentStartQuizSpinner.classList.remove('hidden');
+            dom.studentStartQuizBtn.disabled = true;
+
+            const prompt = `
+                Quiz Target: A student in ${sClass}.
+                Country: ${country}.
+                Curriculum/Board: ${board}.
+                Subject: ${subject}.
+                ${topic ? `Specific Topic: ${topic}.` : 'Topic: General mix for the selected subject.'}
+                Difficulty: ${difficulty}/10 (1 is easiest, 10 is hardest for this specific class level and subject).
+            `;
+
+            const questions = await generateQuizJSON(prompt, numQuestions);
+
+            dom.studentStartQuizBtnText.classList.remove('hidden');
+            dom.studentStartQuizSpinner.classList.add('hidden');
+            dom.studentStartQuizBtn.disabled = false;
+
+            if (questions) {
+                startLevel('Student Quiz', questions, true);
+            }
+             // Else: Error handled in generateQuizJSON
+        }
+
+        // --- Settings Modal Functions ---
+        function showSettingsModal() {
+            dom.languageChangeSelect.innerHTML = '';
+            Object.keys(languages).forEach(langCode => {
+                const option = new Option(languages[langCode], langCode);
+                option.selected = (langCode === gameState.currentLanguage);
+                dom.languageChangeSelect.add(option);
+            });
+
+            const currentTheme = document.body.className.match(/theme-\w+/)?.[0] || 'theme-lexicon';
+            dom.themeChangeSelect.value = currentTheme;
+            updateFullscreenButton();
+            dom.volumeSlider.value = bgmGain ? bgmGain.gain.value : 0.3;
+            showModal(dom.settingsModal);
+        }
+
+        function changeLanguage(e) {
+            gameState.currentLanguage = e.target.value;
+            console.log(`Language for generated content set to: ${gameState.currentLanguage} (${languages[gameState.currentLanguage]})`);
+             // Optionally save language preference to playerState?
+             // playerState.preferredLanguage = gameState.currentLanguage;
+             // savePlayerState();
+        }
+
+        function changeTheme(e) {
+            const theme = e.target.value;
+            // Remove only theme classes
+            document.body.classList.remove('theme-lexicon', 'theme-ocean', 'theme-forest');
+            document.body.classList.add(theme);
+             // Optionally save theme preference
+             // playerState.preferredTheme = theme;
+             // savePlayerState();
+        }
+
+        function changeVolume(e) {
+            if (bgmGain) {
+                bgmGain.gain.value = parseFloat(e.target.value); // Ensure it's a float
+            }
+        }
+
+        function toggleFullscreen() {
+            if (!document.fullscreenElement) {
+                document.documentElement.requestFullscreen()
+                    .catch(err => console.error(`Error entering fullscreen: ${err.message} (${err.name})`));
+            } else if (document.exitFullscreen) {
+                document.exitFullscreen();
+            }
+        }
+
+        function updateFullscreenButton() {
+            dom.fullscreenBtn.innerHTML = document.fullscreenElement
+                ? `<i class="fas fa-compress mr-2"></i> Exit Fullscreen`
+                : `<i class="fas fa-expand mr-2"></i> Enter Fullscreen`;
+        }
+
+        // --- Standard Game Functions (continued) ---
+        function startTimer(isFollowUp) {
+            clearInterval(gameState.timer); // Clear any existing timer first
+            const duration = isFollowUp ? config.TIME_PER_QUESTION * 2 : config.TIME_PER_QUESTION;
+            gameState.timerValue = duration;
+            dom.timerBar.style.transition = 'none';
+            dom.timerBar.style.width = '100%';
+            void dom.timerBar.offsetWidth; // Force reflow
+            dom.timerBar.style.transition = `width ${duration}s linear`;
+            dom.timerBar.style.width = '0%';
+
+            gameState.timer = setInterval(() => {
+                gameState.timerValue--;
+                if (gameState.timerValue <= 0) {
+                    clearInterval(gameState.timer);
+                    console.log("Time's up!");
+                    // Find the first available button to simulate a timeout selection
+                    const firstButton = dom.answersBoxEl.querySelector('button:not([style*="visibility: hidden"])');
+                     // Disable buttons immediately on timeout
+                     Array.from(dom.answersBoxEl.children).forEach(btn => btn.disabled = true);
+                    // Pass a dummy event object if no button is found
+                     selectAnswer({ target: firstButton || document.createElement('button') });
+                }
+            }, 1000);
+        }
+
+        async function fetchExplanations(incorrectAnswerText = null, isFollowUp = false) {
+            const questionData = gameState.levelQuestions[gameState.currentQuestionIndex];
+            if (!questionData) return;
+
+            dom.explanationText.textContent = questionData.explanation || "No explanation available.";
+            dom.incorrectExplanationDiv.classList.add('hidden'); // Hide initially
+            dom.followUpDiv.classList.add('hidden'); // Hide initially
+
+            if (incorrectAnswerText) {
+                dom.incorrectExplanationDiv.classList.remove('hidden');
+                dom.incorrectExplanationText.textContent = "Analyzing...";
+                const prompt = `In a multiple choice quiz, the question was: "${questionData.question}". The correct answer is "${questionData.answer}". I wrongly chose "${incorrectAnswerText}". Explain briefly in ${languages[gameState.currentLanguage]} why my choice was incorrect.`;
+                const explanation = await generateGeminiText(prompt);
+                dom.incorrectExplanationText.textContent = explanation || "Could not generate feedback.";
+            }
+            if (!isFollowUp && !gameState.isStudentQuiz) { // Don't show follow up button on follow-up or student quiz
+                 dom.followUpDiv.classList.remove('hidden');
+            }
+
+            // Expand animation
+            dom.explanationBox.style.padding = '1rem';
+            dom.explanationBox.style.maxHeight = 'none'; // Temporarily remove max-height
+            const scrollHeight = dom.explanationBox.scrollHeight;
+            dom.explanationBox.style.maxHeight = '0';
+            void dom.explanationBox.offsetWidth; // Reflow
+            dom.explanationBox.style.maxHeight = scrollHeight + "px";
+        }
+
+        function goToNextQuestion() {
+            clearTimeout(gameState.nextQuestionTimer);
+            gameState.nextQuestionTimer = setTimeout(() => {
+                gameState.currentQuestionIndex++;
+                showNextQuestion(gameState.isFollowUp);
+            }, 4000); // Increased delay
+        }
+
+        function resetQuestionState() {
+             clearTimeout(gameState.nextQuestionTimer);
+             clearInterval(gameState.timer);
+             dom.answersBoxEl.innerHTML = '';
+             dom.explanationBox.style.maxHeight = '0';
+             dom.explanationBox.style.padding = '0';
+             dom.incorrectExplanationDiv.classList.add('hidden');
+             dom.followUpDiv.classList.add('hidden');
+             dom.lifeline5050.classList.remove('used');
+              dom.lifeline5050.style.visibility = ''; // Reset visibility
+             dom.lifelineHint.classList.remove('used');
+             // Reset timer bar
+             dom.timerBar.style.transition = 'none';
+             dom.timerBar.style.width = '100%';
+             // Reset question text (optional, shows loading quicker)
+             dom.questionTextEl.textContent = 'Loading question...';
+        }
+
+        function updateScoreDisplay() {
+            dom.scoreDisplay.textContent = gameState.score || 0;
+        }
+
+        function updateStreakCounter() {
+            dom.streakCounter.textContent = gameState.streak || 0;
+            const streakColors = {0: 'border-transparent', 1: 'border-blue-400', 2: 'border-green-400', 3: 'border-yellow-400', 4: 'border-orange-400', 5: 'border-red-500 animate-pulse'};
+            Object.values(streakColors).forEach(c => dom.streakCounter.classList.remove(...c.split(' ').filter(cls => cls.startsWith('border-') || cls === 'animate-pulse')));
+            const colorClass = streakColors[Math.min(gameState.streak || 0, 5)];
+            dom.streakCounter.classList.add(...colorClass.split(' '));
+        }
+
+        function updateLifelineCounts() {
+            // Ensure lifelineCounts exists and provide defaults
+             const counts = playerState.lifelineCounts || { fiftyFifty: 0, hint: 0 };
+            dom.lifeline5050Count.textContent = counts.fiftyFifty;
+            dom.lifelineHintCount.textContent = counts.hint;
+        }
+
+        function showModal(modalElement) {
+            dom.modalContainer.classList.remove('hidden');
+            [dom.levelResultModal, dom.hintModal, dom.confirmModal, dom.analysisModal, dom.achievementsModal, dom.storeModal, dom.settingsModal].forEach(m => m.classList.add('hidden'));
+            modalElement.classList.remove('hidden');
+        }
+
+        function useFiftyFifty() {
+            if (dom.lifeline5050.classList.contains('used') || (playerState.lifelineCounts?.fiftyFifty || 0) <= 0) return;
+             if (dom.answersBoxEl.children.length < 4) return;
+
+             if(clickSound) try { clickSound.triggerAttackRelease("C2", "8n"); } catch(e){ console.warn("Audio error:", e); }
+
+             if (!playerState.lifelineCounts) playerState.lifelineCounts = { fiftyFifty: 0, hint: 0 }; // Initialize if missing
+            playerState.lifelineCounts.fiftyFifty--;
+            updateLifelineCounts();
+            savePlayerState();
+            dom.lifeline5050.classList.add('used');
+
+            const questionData = gameState.levelQuestions[gameState.currentQuestionIndex];
+            if (!questionData || !questionData.answer) return;
+            const correctAnswer = questionData.answer;
+            const wrongOptions = Array.from(dom.answersBoxEl.children)
+                .filter(btn => btn.textContent !== correctAnswer && btn.style.visibility !== 'hidden');
+
+             if (wrongOptions.length >= 2) {
+                 wrongOptions.sort(() => 0.5 - Math.random());
+                 wrongOptions[0].style.visibility = 'hidden';
+                 wrongOptions[1].style.visibility = 'hidden';
+             } else if (wrongOptions.length === 1) {
+                 wrongOptions[0].style.visibility = 'hidden';
+             }
+        }
+
+        async function useHint() {
+            if (dom.lifelineHint.classList.contains('used') || (playerState.lifelineCounts?.hint || 0) <= 0) return;
+             if(clickSound) try { clickSound.triggerAttackRelease("C2", "8n"); } catch(e){ console.warn("Audio error:", e); }
+
+             if (!playerState.lifelineCounts) playerState.lifelineCounts = { fiftyFifty: 0, hint: 0 }; // Initialize if missing
+            playerState.lifelineCounts.hint--;
+            updateLifelineCounts();
+            savePlayerState();
+            dom.lifelineHint.classList.add('used');
+
+            const questionData = gameState.levelQuestions[gameState.currentQuestionIndex];
+            if (!questionData || !questionData.question) return;
+
+            dom.hintText.textContent = 'Generating hint...';
+            showModal(dom.hintModal);
+
+            const prompt = `Give a short, one-sentence hint in ${languages[gameState.currentLanguage]} for the following question, without revealing the answer. Question: "${questionData.question}"`;
+            const hint = await generateGeminiText(prompt);
+            dom.hintText.textContent = hint || "Could not generate a hint at this time.";
+        }
+
+        function confirmResetProgress() {
+            dom.confirmText.textContent = "This will erase all your unlocked levels, achievements, and coins. This action cannot be undone.";
+            dom.confirmOkBtn.onclick = async () => {
+                dom.modalContainer.classList.add('hidden'); // Hide modal first
+                if (userId) {
+                    try {
+                        const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
+                        const playerDocRef = doc(db, `artifacts/${appId}/users/${userId}/gameState/data`);
+                        await deleteDoc(playerDocRef);
+                         console.log("Firestore data deleted.");
+                         // Listener should automatically update state. If not, manual reset might be needed.
+                         // Forcing a state reload just in case listener is slow or fails
+                         loadPlayerState();
+                         showLevelSelect();
+                         updateCoinBalance();
+
+                    } catch (error) {
+                        console.error("Error deleting player state from Firestore:", error);
+                         alert("Error resetting progress online. Please try refreshing.");
+                    }
+                } else {
+                     // If no user ID, just clear local and reload state
+                    localStorage.removeItem('lexiconPlayerState');
+                    console.log("Local storage data deleted.");
+                    loadPlayerState(); // Reloads the default state
+                    showLevelSelect(); // Redraws the level select screen
+                    updateCoinBalance(); // Update coin display
+                }
+            };
+            showModal(dom.confirmModal);
+        }
+
+        async function handleGenerateQuiz() {
+            const topic = dom.customTopicInput.value.trim();
+            if (!topic) return;
+
+            dom.generateBtnText.classList.add('hidden');
+            dom.generateSpinner.classList.remove('hidden');
+            dom.generateQuizBtn.disabled = true;
+            dom.customTopicInput.disabled = true;
+
+            const questions = await generateQuizJSON(topic, config.QUESTIONS_PER_LEVEL);
+
+            dom.generateBtnText.classList.remove('hidden');
+            dom.generateSpinner.classList.add('hidden');
+            dom.generateQuizBtn.disabled = false;
+            dom.customTopicInput.disabled = false;
+            dom.customTopicInput.value = '';
+
+            if (questions) {
+                startLevel(topic, questions);
+            }
+             // Else: Error handled in generateQuizJSON
+        }
+
+        async function handleAnalyzePerformance() {
+             if (!gameState.wronglyAnsweredQuestions || gameState.wronglyAnsweredQuestions.length === 0) {
+                 alert("No incorrect answers to analyze for this session!");
+                 return;
+            }
+            dom.analysisText.innerHTML = 'Analyzing your answers... <div class="spinner inline-block ml-2"></div>'; // Show spinner
+            showModal(dom.analysisModal);
+
+            const prompt = `I got some questions wrong in a quiz. Here they are: ${JSON.stringify(gameState.wronglyAnsweredQuestions)}. Please analyze my performance in ${languages[gameState.currentLanguage]}. Identify patterns or weak areas. Provide constructive feedback encouragingly. Format clearly (e.g., use markdown lists).`;
+            const analysis = await generateGeminiText(prompt);
+             // Simple markdown to HTML (replace **text** with <strong>text</strong> and *text* with <em>text</em>, and newlines with <br>)
+             // NOTE: This is basic; a proper markdown library would be better for complex formatting.
+             const formattedAnalysis = analysis
+                                        ? analysis.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+                                                  .replace(/\*(.*?)\*/g, '<em>$1</em>')
+                                                  .replace(/\n/g, '<br>')
+                                        : "Could not generate analysis at this time.";
+            dom.analysisText.innerHTML = formattedAnalysis;
+        }
+
+        async function handleFollowUpQuestion() {
+            if(clickSound) try { clickSound.triggerAttackRelease("A2", "8n"); } catch(e){ console.warn("Audio error:", e); }
+            checkAchievement('curious'); // Check here, as it's the trigger action
+            const questionData = gameState.levelQuestions[gameState.currentQuestionIndex];
+             if (!questionData || !questionData.question || !questionData.answer) {
+                 alert("Cannot generate follow-up: Current question data is invalid.");
+                 return;
+            }
+
+            dom.questionTextEl.textContent = 'Generating a related question...';
+            dom.answersBoxEl.innerHTML = '';
+            dom.explanationBox.style.maxHeight = '0';
+            dom.explanationBox.style.padding = '0';
+
+            const newQuestion = await generateSingleQuestionJSON(questionData.question, questionData.answer);
+
+            if (newQuestion) {
+                 gameState.levelQuestions = [newQuestion];
+                 gameState.currentQuestionIndex = 0;
+                 showNextQuestion(true); // Indicate it's a follow-up
+            } else {
+                dom.questionTextEl.textContent = 'Could not generate a follow-up question. Please try again later, or go back.';
+                 // Add a button to go back maybe?
+                 const backBtn = document.createElement('button');
+                 backBtn.textContent = 'Back to Levels';
+                 backBtn.className = 'btn bg-blue-500 hover:bg-blue-600 p-4 rounded-lg mt-4';
+                 backBtn.onclick = showLevelSelect;
+                 dom.answersBoxEl.appendChild(backBtn); // Add back button in answers area
+            }
+        }
+
+        function goBackToLevelSelect() {
+             // Only confirm if quiz is in progress and not already finished
+             if (gameState.currentQuestionIndex < (gameState.levelQuestions?.length || 0)) {
+                 dom.confirmText.textContent = "Quit this quiz? Your progress won't be saved.";
+                 dom.confirmOkBtn.onclick = () => {
+                     stopBGM();
+                     resetQuestionState();
+                     dom.modalContainer.classList.add('hidden');
+                     showLevelSelect();
+                 };
+                 showModal(dom.confirmModal);
+             } else {
+                 stopBGM();
+                 resetQuestionState();
+                 showLevelSelect(); // If quiz finished, just go back
+             }
+        }
+
+        function checkAllAchievements() {
+            Object.keys(achievements).forEach(id => checkAchievement(id));
+        }
+
+        function checkAchievement(id) {
+            if (!playerState || !achievements[id]) return; // Safety checks
+            const unlockedAchievements = playerState.achievements || [];
+            if (unlockedAchievements.includes(id)) return;
+
+            let unlocked = false;
+            const achievementData = achievements[id];
+            const milestoneLevel = Object.keys(milestoneAchievements).find(key => milestoneAchievements[key] === id);
+
+            // Check conditions
+            if (milestoneLevel && (playerState.unlockedLevel || 1) > parseInt(milestoneLevel, 10)) unlocked = true;
+            else if (id === 'streaker' && (playerState.correctAnswersInRow || 0) >= 5) unlocked = true;
+            else if (id === 'on_a_roll' && (playerState.levelsPassedInRow || 0) >= 3) unlocked = true;
+            else if (id === 'untouchable' && (playerState.levelsPassedInRow || 0) >= 5) unlocked = true;
+            else if (id === 'quiz_novice' && (playerState.totalCorrectAnswers || 0) >= 50) unlocked = true;
+            else if (id === 'perfecto' && gameState.score === gameState.levelQuestions?.length && gameState.levelQuestions?.length > 0) unlocked = true; // Perfecto checked here too now
+            // 'curious' is checked in handleFollowUpQuestion
+
+            if (unlocked) {
+                 if (!playerState.achievements) playerState.achievements = []; // Ensure array exists
+                playerState.achievements.push(id);
+                const reward = achievementData.reward || 0;
+                addCoins(reward, false); // Add coins but don't update display yet (toast will show)
+                showAchievementToast(achievementData.title, reward);
+                savePlayerState(); // Save state when achievement is unlocked
+            }
+        }
+
+        function showAchievementToast(name, coins) {
+            dom.achievementToastName.textContent = name;
+            dom.achievementToastCoins.textContent = `+${coins}`;
+            updateCoinBalance(); // Update coin display when toast shows
+            dom.achievementToast.classList.add('show');
+            setTimeout(() => {
+                dom.achievementToast.classList.remove('show');
+            }, 4000);
+        }
+
+        function showAchievementsModal() {
+             dom.achievementsList.innerHTML = '';
+             const unlockedAchievements = playerState.achievements || [];
+
+            Object.entries(achievements).forEach(([id, ach]) => {
+                const isUnlocked = unlockedAchievements.includes(id);
+                const element = document.createElement('div');
+                element.className = `p-4 rounded-lg flex items-center gap-4 border-2 ${isUnlocked ? 'bg-yellow-900/50 border-yellow-500' : 'bg-gray-800/50 border-gray-700'}`;
+                element.innerHTML = `
+                    <div class="w-12 h-12 flex-shrink-0 rounded-full flex items-center justify-center ${isUnlocked ? ach.bgColor : 'bg-gray-600'}">
+                        <i class="fas ${ach.icon} text-2xl ${isUnlocked ? ach.color : 'text-gray-400'}"></i>
+                    </div>
+                    <div>
+                        <h3 class="font-bold text-lg ${isUnlocked ? 'text-white' : 'text-gray-400'}">${ach.title}</h3>
+                        <p class="text-sm ${isUnlocked ? 'text-gray-300' : 'text-gray-500'}">${ach.description}</p>
+                    </div>
+                    <div class="ml-auto text-center flex-shrink-0">
+                        <p class="font-bold text-lg text-yellow-400">+${ach.reward || 0}</p>
+                        <i class="fas fa-coins text-yellow-400"></i>
+                    </div>
+                `;
+                dom.achievementsList.appendChild(element);
+            });
+            showModal(dom.achievementsModal);
+        }
+
+        async function startDailyChallenge() {
+            const topic = "General Knowledge Medley from various fields like science, history, arts, and geography.";
+            dom.dailyChallengeBtn.disabled = true;
+            dom.dailyChallengeDesc.textContent = "Generating today's challenge...";
+            const questions = await generateQuizJSON(topic, config.DAILY_CHALLENGE_QUESTIONS);
+            if (questions) {
+                startLevel('Daily', questions);
+            } else {
+                 // Error handled by generateQuizJSON
+                dom.dailyChallengeBtn.disabled = false;
+                dom.dailyChallengeDesc.textContent = "A unique 15-question quiz. New challenge every day!";
+            }
+        }
+
+        function addCoins(amount, updateDisplay = true) {
+            playerState.coins = (playerState.coins || 0) + amount;
+            if (updateDisplay) updateCoinBalance();
+        }
+
+        function updateCoinBalance() {
+            dom.coinBalance.textContent = Number(playerState.coins || 0);
+        }
+
+        function showStoreModal() {
+            dom.storeItemsList.innerHTML = '';
+             Object.entries(storeItems).forEach(([id, item]) => {
+                 const element = document.createElement('div');
+                 element.className = 'p-4 bg-gray-800/50 rounded-lg flex items-center gap-4';
+                 element.innerHTML = `
+                     <div class="w-12 h-12 flex-shrink-0 rounded-full bg-gray-700 flex items-center justify-center">
+                         <i class="fas ${item.icon} text-2xl ${item.color}"></i>
+                     </div>
+                     <div>
+                         <h3 class="font-bold text-lg text-white">${item.name}</h3>
+                         <p class="text-sm text-gray-300">${item.description}</p>
+                     </div>
+                     <button data-item-id="${id}" class="store-buy-btn btn bg-green-600 hover:bg-green-700 ml-auto flex items-center gap-2 font-bold py-2 px-4 rounded-lg flex-shrink-0">
+                         <i class="fas fa-coins"></i>
+                         <span>${item.cost}</span>
+                     </button>
+                 `;
+                 dom.storeItemsList.appendChild(element);
+             });
+            showModal(dom.storeModal);
+        }
+
+        function buyStoreItem(e) {
+            const button = e.target.closest('.store-buy-btn');
+            if (!button || button.disabled) return;
+
+            const itemId = button.dataset.itemId;
+            const item = storeItems[itemId];
+             if (!item) return;
+
+            if ((playerState.coins || 0) >= item.cost) {
+                 if(clickSound) try { clickSound.triggerAttackRelease("A4", "8n"); } catch(e){ console.warn("Audio error:", e); }
+                playerState.coins -= item.cost;
+                if (item.grant.type === 'lifeline') {
+                     if (!playerState.lifelineCounts) playerState.lifelineCounts = { fiftyFifty: 0, hint: 0 };
+                    playerState.lifelineCounts[item.grant.key] = (playerState.lifelineCounts[item.grant.key] || 0) + item.grant.amount;
+                }
+                updateCoinBalance();
+                savePlayerState();
+                button.innerHTML = '<i class="fas fa-check"></i> Purchased!';
+                button.disabled = true;
+            } else {
+                if(incorrectSound) try { incorrectSound.triggerAttackRelease("C3", "8n"); } catch(e){ console.warn("Audio error:", e); }
+                alert("Not enough coins!");
+            }
+        }
+
+
+        // --- Event Listeners ---
+        // Add listeners only after DOM is fully loaded, though `type="module"` helps
+         document.addEventListener('DOMContentLoaded', () => { // Not strictly necessary with module script at end, but good practice
+            // Main Nav
+            if (dom.backToStartScreen) dom.backToStartScreen.addEventListener('click', () => showScreen('start-screen'));
+            if (dom.backToMainMenu) dom.backToMainMenu.addEventListener('click', () => showScreen('main-menu-screen'));
+            if (dom.playBtn) dom.playBtn.addEventListener('click', showLevelSelect);
+            if (dom.storeBtn) dom.storeBtn.addEventListener('click', showStoreModal);
+            if (dom.studentSectionBtn) dom.studentSectionBtn.addEventListener('click', showStudentSection);
+            if (dom.backToMainMenuFromStudent) dom.backToMainMenuFromStudent.addEventListener('click', () => showScreen('main-menu-screen'));
+
+            // Level Select
+            if (dom.resetProgressBtn) dom.resetProgressBtn.addEventListener('click', confirmResetProgress);
+            if (dom.achievementsBtn) dom.achievementsBtn.addEventListener('click', showAchievementsModal);
+            if (dom.settingsBtn) dom.settingsBtn.addEventListener('click', showSettingsModal);
+            if (dom.generateQuizBtn) dom.generateQuizBtn.addEventListener('click', handleGenerateQuiz);
+            if (dom.dailyChallengeBtn) dom.dailyChallengeBtn.addEventListener('click', startDailyChallenge);
+
+            // Student Form
+            if (dom.studentClassSelect) dom.studentClassSelect.addEventListener('change', populateSubjects);
+            if (dom.studentCountrySelect) dom.studentCountrySelect.addEventListener('change', populateBoards);
+            if (dom.studentSubjectSelect) dom.studentSubjectSelect.addEventListener('change', populateTopics);
+            if (dom.studentDifficultySlider) dom.studentDifficultySlider.addEventListener('input', (e) => dom.studentDifficultyDisplay.textContent = e.target.value);
+            if (dom.studentStartQuizBtn) dom.studentStartQuizBtn.addEventListener('click', handleStartStudentQuiz);
+
+            // Quiz
+            if (dom.lifeline5050) dom.lifeline5050.addEventListener('click', useFiftyFifty);
+            if (dom.lifelineHint) dom.lifelineHint.addEventListener('click', useHint);
+            if (dom.backToLevelsBtn) dom.backToLevelsBtn.addEventListener('click', goBackToLevelSelect);
+            if (dom.muteBtn) dom.muteBtn.addEventListener('click', toggleMute);
+            if (dom.followUpBtn) dom.followUpBtn.addEventListener('click', handleFollowUpQuestion);
+
+            // Modals
+            if (dom.closeHintBtn) dom.closeHintBtn.addEventListener('click', () => dom.modalContainer.classList.add('hidden'));
+            if (dom.closeStoreBtn) dom.closeStoreBtn.addEventListener('click', () => dom.modalContainer.classList.add('hidden'));
+            if (dom.closeAchievementsBtn) dom.closeAchievementsBtn.addEventListener('click', () => dom.modalContainer.classList.add('hidden'));
+            if (dom.confirmCancelBtn) dom.confirmCancelBtn.addEventListener('click', () => dom.modalContainer.classList.add('hidden'));
+            if (dom.analyzePerformanceBtn) dom.analyzePerformanceBtn.addEventListener('click', handleAnalyzePerformance);
+            if (dom.closeAnalysisBtn) dom.closeAnalysisBtn.addEventListener('click', () => dom.modalContainer.classList.add('hidden'));
+
+            // Settings Modal
+            if (dom.closeSettingsBtn) dom.closeSettingsBtn.addEventListener('click', () => dom.modalContainer.classList.add('hidden'));
+            if (dom.languageChangeSelect) dom.languageChangeSelect.addEventListener('change', changeLanguage);
+            if (dom.themeChangeSelect) dom.themeChangeSelect.addEventListener('change', changeTheme);
+            if (dom.volumeSlider) dom.volumeSlider.addEventListener('input', changeVolume);
+            if (dom.fullscreenBtn) dom.fullscreenBtn.addEventListener('click', toggleFullscreen);
+            document.addEventListener('fullscreenchange', updateFullscreenButton);
+
+            // Store
+            if (dom.storeItemsList) dom.storeItemsList.addEventListener('click', buyStoreItem);
+
+             // Initialize App - moved inside DOMContentLoaded to ensure elements exist
+             init();
+         });
+
+    </script>
+</body>
+</html>
