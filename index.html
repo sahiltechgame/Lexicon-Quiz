@@ -274,14 +274,14 @@
                  </div>
                  <div class="flex gap-2">
                     <button id="settings-btn" class="text-white bg-gray-600 bg-opacity-50 p-3 rounded-full hover:bg-opacity-80 transition" title="Settings">
-                        <i class="fas fa-cog"></i>
+                         <i class="fas fa-cog"></i>
                     </button>
-                     <button id="achievements-btn" class="text-white bg-yellow-600 bg-opacity-50 p-3 rounded-full hover:bg-opacity-80 transition" title="View Achievements">
+                    <button id="achievements-btn" class="text-white bg-yellow-600 bg-opacity-50 p-3 rounded-full hover:bg-opacity-80 transition" title="View Achievements">
                          <i class="fas fa-trophy"></i>
-                     </button>
-                     <button id="reset-progress-btn" class="text-white bg-red-800 bg-opacity-50 p-3 rounded-full hover:bg-opacity-80 transition" title="Reset All Progress">
+                    </button>
+                    <button id="reset-progress-btn" class="text-white bg-red-800 bg-opacity-50 p-3 rounded-full hover:bg-opacity-80 transition" title="Reset All Progress">
                          <i class="fas fa-trash-alt"></i>
-                     </button>
+                    </button>
                  </div>
              </div>
              <!-- Daily Challenge & Custom Quiz -->
@@ -308,7 +308,7 @@
 
         <!-- Quiz Screen -->
         <div id="quiz-screen" class="hidden w-full h-full flex flex-col justify-between p-4 md:p-8 bg-black bg-opacity-30 rounded-2xl shadow-2xl backdrop-blur-sm border border-gray-700">
-            <!-- Quiz Screen content remains unchanged -->
+             <!-- Quiz Screen content remains unchanged -->
              <div class="flex justify-between items-center mb-2">
                  <div class="w-28">
                      <button id="back-to-levels-btn" class="text-white bg-black bg-opacity-20 p-3 rounded-full hover:bg-opacity-40 transition"><i class="fas fa-arrow-left"></i></button>
@@ -388,11 +388,17 @@
                 <button id="confirm-ok-btn" class="bg-red-600 hover:bg-red-700 text-white font-bold py-3 px-8 rounded-full text-lg btn">OK</button>
             </div>
         </div>
+        <!-- Info Modal (Replaces alert()) -->
+        <div id="info-modal" class="hidden bg-lexicon border-2 border-blue-400 text-center p-10 rounded-2xl shadow-lg max-w-md w-full">
+            <h2 id="info-modal-title" class="text-3xl font-bold text-blue-400 mb-4">Info</h2>
+            <p id="info-modal-text" class="text-xl mb-8"></p>
+            <button id="info-modal-ok-btn" class="bg-blue-500 hover:bg-blue-600 text-white font-bold py-3 px-8 rounded-full text-lg btn">OK</button>
+        </div>
         <!-- Analysis Modal -->
         <div id="analysis-modal" class="hidden bg-lexicon border-2 border-yellow-400 text-center p-10 rounded-2xl shadow-lg max-w-lg w-full">
             <h2 class="text-3xl font-bold text-yellow-400 mb-4">✨ Performance Analysis</h2>
             <p id="analysis-text" class="text-lg mb-8 text-left"></p>
-            <button id="close-analysis-btn" class="bg-yellow-500 hover:bg-yellow-600 text-black font-bold py-3 px-8 rounded-full text-lg btn">Got it!</button>
+            <button id="close-analysis-btn" class="bg-yellow-500 hover:bg-yellow-600 text-black font-bold py-3 px-8 rounded-full text-lg btn">Got it!</D>
         </div>
         <!-- Achievements Modal -->
         <div id="achievements-modal" class="hidden bg-lexicon border-2 border-yellow-400 p-8 rounded-2xl shadow-lg max-w-2xl w-full flex flex-col">
@@ -472,7 +478,9 @@
         // -----------------------------------------------------------------
         // --- IMPORTANT: API KEY CONFIGURATION ---
         // -----------------------------------------------------------------
-        const apiKey = "gen-lang-client-0841788054"; // <<< YOUR KEY IS HERE
+        // The API key is an empty string. The Canvas environment will securely
+        // inject the necessary key at runtime. Do not paste any key here.
+        const apiKey = "";
         // -----------------------------------------------------------------
 
 
@@ -586,6 +594,10 @@
             levelResultModal: document.getElementById('level-result-modal'),
             hintModal: document.getElementById('hint-modal'),
             confirmModal: document.getElementById('confirm-modal'),
+            infoModal: document.getElementById('info-modal'),
+            infoModalTitle: document.getElementById('info-modal-title'),
+            infoModalText: document.getElementById('info-modal-text'),
+            infoModalOkBtn: document.getElementById('info-modal-ok-btn'),
             analysisModal: document.getElementById('analysis-modal'),
             achievementsModal: document.getElementById('achievements-modal'),
             achievementsList: document.getElementById('achievements-list'),
@@ -652,7 +664,7 @@
         // --- Audio State ---
         let audioInitialized = false;
         let isMuted = false;
-        let correctSound, incorrectSound, bgm, clickSound, levelCompleteSound, levelFailSound, bgmGain;
+        let correctSound, incorrectSound, bgmLoop, bgmSynth, clickSound, levelCompleteSound, levelFailSound, bgmGain;
 
         // --- Audio Engine ---
         function initAudio() {
@@ -667,14 +679,32 @@
                 levelCompleteSound = new Tone.PolySynth(Tone.Synth).toDestination();
                 levelFailSound = new Tone.PolySynth(Tone.Synth).toDestination();
 
-                bgmGain = new Tone.Gain(0.3).toDestination();
-                if (dom.volumeSlider) dom.volumeSlider.value = 0.3;
+                bgmGain = new Tone.Gain(0.1).toDestination(); // Lowered default volume
+                if (dom.volumeSlider) dom.volumeSlider.value = 0.1;
 
-                bgm = new Tone.Player({
-                    url: "https://tonejs.github.io/audio/berklee/gong_1.mp3", // Placeholder URL
-                    loop: true,
-                    fadeOut: 0.5
+                // Create a simple synth for BGM
+                bgmSynth = new Tone.MonoSynth({
+                    oscillator: { type: "sine" },
+                    envelope: { attack: 0.1, decay: 0.2, sustain: 0.5, release: 0.8 },
+                    filterEnvelope: { attack: 0.01, decay: 0.1, sustain: 0.2, release: 0.5, baseFrequency: 200, octaves: 4 }
                 }).connect(bgmGain);
+
+                // Create a simple looping melody
+                const melody = [
+                    "C3", "E3", "G3", "B3",
+                    "C4", "B3", "G3", "E3",
+                    "D3", "F#3", "A3", "C#4",
+                    "D4", "C#4", "A3", "F#3"
+                ];
+                let melodyIndex = 0;
+
+                bgmLoop = new Tone.Loop(time => {
+                    let note = melody[melodyIndex % melody.length];
+                    bgmSynth.triggerAttackRelease(note, "8n", time);
+                    melodyIndex++;
+                }, "4n").start(0);
+
+                Tone.Transport.start();
 
                 audioInitialized = true;
                 console.log("Audio Initialized");
@@ -686,15 +716,16 @@
         }
 
         function playBGM(levelNum = 10) { // Default levelNum if not provided
-            if (!audioInitialized || isMuted || bgm.state === 'started') return;
+            if (!audioInitialized || isMuted || (bgmLoop && bgmLoop.state === 'started')) return;
             const safeLevelNum = typeof levelNum === 'number' ? levelNum : 10; // Ensure levelNum is a number
-            const playbackRate = 1 + (safeLevelNum / config.TOTAL_LEVELS) * 0.5;
-            bgm.playbackRate = Math.max(0.5, Math.min(playbackRate, 2)); // Clamp playback rate
+            // Adjust playback rate based on level
+            const playbackRate = 0.8 + (safeLevelNum / config.TOTAL_LEVELS) * 0.7; // Slower start, max 1.5
+            bgmLoop.playbackRate = Math.max(0.5, Math.min(playbackRate, 1.5)); // Clamp playback rate
+            
             try {
-                 if (bgm.loaded) {
-                    bgm.start();
-                 } else {
-                     bgm.load("https://tonejs.github.io/audio/berklee/gong_1.mp3").then(() => bgm.start());
+                 Tone.Transport.start();
+                 if(bgmLoop.state !== 'started') {
+                    bgmLoop.start(0);
                  }
             } catch (error) {
                 console.error("Error playing BGM:", error);
@@ -702,9 +733,10 @@
         }
 
         function stopBGM() {
-            if (!audioInitialized || bgm.state !== 'started') return;
+            if (!audioInitialized || (bgmLoop && bgmLoop.state !== 'started')) return;
              try {
-                bgm.stop();
+                if(bgmLoop) bgmLoop.stop();
+                // Tone.Transport.stop(); // Don't stop transport, just the loop
              } catch(error) {
                  console.error("Error stopping BGM:", error);
              }
@@ -739,7 +771,7 @@
                 app = initializeApp(firebaseConfig);
                 db = getFirestore(app);
                 auth = getAuth(app);
-                setLogLevel('error');
+                setLogLevel('Debug'); // Changed from 'error' to 'Debug'
 
                 onAuthStateChanged(auth, user => {
                     if (user) {
@@ -799,9 +831,9 @@
              if (!playerState.achievements) playerState.achievements = [];
              if (!playerState.levelData) playerState.levelData = {};
 
-            console.log("Player state loaded (local fallback):", playerState);
+             console.log("Player state loaded (local fallback):", playerState);
              updateCoinBalance(); // Update UI immediately after loading local state
-         }
+        }
 
         function attachPlayerStateListener() {
             if (!userId) {
@@ -840,14 +872,14 @@
                 // Update relevant UI elements
                  updateCoinBalance(); // Crucial to update coins displayed
                  if (dom.levelSelectScreen.classList.contains('flex')) {
-                    showLevelSelect(); // Redraw levels based on potentially updated unlockedLevel
-                }
+                     showLevelSelect(); // Redraw levels based on potentially updated unlockedLevel
+                 }
                 if (dom.quizScreen.classList.contains('flex')) {
-                    updateLifelineCounts(); // Update lifeline counts if in quiz
-                }
+                     updateLifelineCounts(); // Update lifeline counts if in quiz
+                 }
             }, (error) => {
                 console.error("Error listening to player state:", error);
-                alert("Error connecting to save data. Progress might not be saved online. Using local backup.");
+                showInfoModal("Error connecting to save data. Progress might not be saved online. Using local backup.");
                 loadPlayerState(); // Fallback to local storage if listener fails
             });
         }
@@ -869,7 +901,7 @@
                 console.log("Player state saved to Firestore.");
             } catch (error) {
                 console.error("Error saving player state to Firestore:", error);
-                alert("Error saving progress online. Saving locally as backup.");
+                showInfoModal("Error saving progress online. Saving locally as backup.");
                 localStorage.setItem('lexiconPlayerState', JSON.stringify(playerState)); // Fallback save
             }
         }
@@ -881,82 +913,74 @@
 
         // --- Gemini API ---
          async function generateGeminiText(prompt, isJson = false) {
-            if (apiKey === "PASTE_YOUR_GEMINI_API_KEY_HERE" || !apiKey) {
-                console.error("Gemini API Key is missing or invalid.");
-                alert("Developer Error: Gemini API Key is missing or invalid. Please add your API key to the script to use AI features.");
-                return null;
-            }
-
-             const model = 'gemini-1.5-flash-latest'; // Use the correct model name
-            const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
+             // API key check removed. The empty string is valid.
+             
+             const model = 'gemini-2.5-flash-preview-09-2025'; // Updated model
+             const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
 
              console.log("Sending prompt to Gemini:", prompt); // Log the prompt
 
-            const payload = {
-                contents: [{ parts: [{ text: prompt }] }],
-                 // Add safety settings if needed, otherwise rely on defaults
-                 // safetySettings: [ ... ],
-                ...(isJson && {
-                    generationConfig: {
-                        responseMimeType: "application/json",
-                    }
-                })
-            };
-
-            let response;
-            try {
-                response = await fetch(apiUrl, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(payload)
-                });
-
-                const responseData = await response.json(); // Always parse JSON response
-
-                if (!response.ok) {
-                    // Log detailed error from API response
-                    console.error(`API call failed with status: ${response.status}. Response:`, JSON.stringify(responseData, null, 2));
-                    throw new Error(`API call failed: ${responseData?.error?.message || response.status}`);
-                }
-
-                 // More robust checking, including finishReason
-                 if (!responseData || !responseData.candidates || responseData.candidates.length === 0) {
-                     console.error("Invalid response structure - no candidates:", responseData);
-                    throw new Error("Invalid API response: No candidates found.");
-                 }
-
-                 const candidate = responseData.candidates[0];
-
-                 if (candidate.finishReason && candidate.finishReason !== "STOP") {
-                     console.warn(`API call finished with reason: ${candidate.finishReason}. Safety ratings:`, candidate.safetyRatings);
-                     // Optionally handle specific reasons like SAFETY differently
-                     if (candidate.finishReason === "SAFETY") {
-                         throw new Error("Content generation blocked due to safety settings.");
+             const payload = {
+                 contents: [{ parts: [{ text: prompt }] }],
+                  // Add safety settings if needed, otherwise rely on defaults
+                  // safetySettings: [ ... ],
+                 ...(isJson && {
+                     generationConfig: {
+                         responseMimeType: "application/json",
                      }
+                 })
+             };
+
+             let response;
+             try {
+                 response = await fetch(apiUrl, {
+                     method: 'POST',
+                     headers: { 'Content-Type': 'application/json' },
+                     body: JSON.stringify(payload)
+                 });
+
+                 const responseData = await response.json(); // Always parse JSON response
+
+                 if (!response.ok) {
+                     // Log detailed error from API response
+                     console.error(`API call failed with status: ${response.status}. Response:`, JSON.stringify(responseData, null, 2));
+                     throw new Error(`API call failed: ${responseData?.error?.message || response.status}`);
                  }
 
+                  // More robust checking, including finishReason
+                  if (!responseData || !responseData.candidates || responseData.candidates.length === 0) {
+                       console.error("Invalid response structure - no candidates:", responseData);
+                       throw new Error("Invalid API response: No candidates found.");
+                  }
 
-                 if (!candidate.content || !candidate.content.parts || candidate.content.parts.length === 0 || !candidate.content.parts[0].text) {
-                     console.error("Invalid response structure - missing text content:", responseData);
-                     throw new Error("Invalid API response: Missing text content.");
-                 }
-                const text = candidate.content.parts[0].text;
-                 console.log("Received text from Gemini:", text); // Log successful response text
-                return text;
+                  const candidate = responseData.candidates[0];
 
-            } catch (error) {
-                console.error("Gemini API Error:", error);
-                alert(`An error occurred while communicating with the AI: ${error.message}. Please check the console.`);
-                return null;
-            }
-        }
+                  if (candidate.finishReason && candidate.finishReason !== "STOP") {
+                       console.warn(`API call finished with reason: ${candidate.finishReason}. Safety ratings:`, candidate.safetyRatings);
+                       // Optionally handle specific reasons like SAFETY differently
+                       if (candidate.finishReason === "SAFETY") {
+                           throw new Error("Content generation blocked due to safety settings.");
+                       }
+                  }
+
+
+                  if (!candidate.content || !candidate.content.parts || candidate.content.parts.length === 0 || !candidate.content.parts[0].text) {
+                       console.error("Invalid response structure - missing text content:", responseData);
+                       throw new Error("Invalid API response: Missing text content.");
+                  }
+                 const text = candidate.content.parts[0].text;
+                  console.log("Received text from Gemini:", text); // Log successful response text
+                 return text;
+
+             } catch (error) {
+                 console.error("Gemini API Error:", error);
+                 showInfoModal(`An error occurred while communicating with the AI: ${error.message}. Please check the console.`);
+                 return null;
+             }
+         }
 
         async function generateQuizJSON(topic, numQuestions) {
-            if (apiKey === "PASTE_YOUR_GEMINI_API_KEY_HERE" || !apiKey) {
-                console.error("Gemini API Key is missing or invalid.");
-                alert("Developer Error: Gemini API Key is missing or invalid. Please add your API key to the script to use AI features.");
-                return null;
-            }
+            // API key check removed
 
             const currentLangName = languages[gameState.currentLanguage] || 'English'; // Get language name
 
@@ -992,58 +1016,58 @@
 
 
             const payload = {
-                contents: [{ parts: [{ text: prompt }] }],
-                generationConfig: {
-                    responseMimeType: "application/json",
-                    responseSchema: schema
-                }
-                 // Add safety settings if needed
+                 contents: [{ parts: [{ text: prompt }] }],
+                 generationConfig: {
+                     responseMimeType: "application/json",
+                     responseSchema: schema
+                 }
+                  // Add safety settings if needed
             };
 
-            const model = 'gemini-1.5-flash-latest';
+            const model = 'gemini-2.5-flash-preview-09-2025'; // Updated model
             const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
             console.log("Sending quiz generation prompt:", prompt); // Log prompt
 
             try {
                  const response = await fetch(apiUrl, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(payload)
-                });
+                     method: 'POST',
+                     headers: { 'Content-Type': 'application/json' },
+                     body: JSON.stringify(payload)
+                 });
 
-                const responseData = await response.json(); // Always parse response
+                 const responseData = await response.json(); // Always parse response
 
-                if (!response.ok) {
-                    console.error(`API Error generating quiz JSON: ${response.status}. Response:`, JSON.stringify(responseData, null, 2));
-                    throw new Error(`API Error: ${responseData?.error?.message || response.status}`);
+                 if (!response.ok) {
+                     console.error(`API Error generating quiz JSON: ${response.status}. Response:`, JSON.stringify(responseData, null, 2));
+                     throw new Error(`API Error: ${responseData?.error?.message || response.status}`);
                  }
 
                  if (!responseData || !responseData.candidates || responseData.candidates.length === 0) {
-                     console.error("Invalid quiz JSON response - no candidates:", responseData);
-                     throw new Error("Invalid API response: No candidates found.");
+                      console.error("Invalid quiz JSON response - no candidates:", responseData);
+                      throw new Error("Invalid API response: No candidates found.");
                  }
                  const candidate = responseData.candidates[0];
 
                  if (candidate.finishReason && candidate.finishReason !== "STOP") {
-                     console.warn(`Quiz generation finished with reason: ${candidate.finishReason}. Safety ratings:`, candidate.safetyRatings);
-                      if (candidate.finishReason === "SAFETY") {
-                         throw new Error("Quiz generation blocked due to safety settings.");
-                     }
-                      // Handle other reasons if necessary, maybe retry or return null
-                      // For now, treat unexpected finish reasons as errors for quiz generation
-                      throw new Error(`Quiz generation finished unexpectedly: ${candidate.finishReason}`);
+                      console.warn(`Quiz generation finished with reason: ${candidate.finishReason}. Safety ratings:`, candidate.safetyRatings);
+                       if (candidate.finishReason === "SAFETY") {
+                           throw new Error("Quiz generation blocked due to safety settings.");
+                      }
+                       // Handle other reasons if necessary, maybe retry or return null
+                       // For now, treat unexpected finish reasons as errors for quiz generation
+                       throw new Error(`Quiz generation finished unexpectedly: ${candidate.finishReason}`);
                  }
 
                  if (!candidate.content || !candidate.content.parts || candidate.content.parts.length === 0 || !candidate.content.parts[0].text) {
-                     console.error("Invalid quiz JSON response - missing text content:", responseData);
-                     throw new Error("Invalid API response: Missing text content.");
+                      console.error("Invalid quiz JSON response - missing text content:", responseData);
+                      throw new Error("Invalid API response: Missing text content.");
                  }
 
 
                 const jsonText = candidate.content.parts[0].text;
                  console.log("Received raw JSON text:", jsonText); // Log raw text
 
-                let parsed;
+                 let parsed;
                  try {
                      parsed = JSON.parse(jsonText);
                  } catch (parseError) {
@@ -1051,46 +1075,42 @@
                       throw new Error("Failed to parse AI response as valid JSON.");
                  }
 
-                // Robust validation
-                if (!parsed.questions || !Array.isArray(parsed.questions) || parsed.questions.length === 0) {
+                 // Robust validation
+                 if (!parsed.questions || !Array.isArray(parsed.questions) || parsed.questions.length === 0) {
                      console.error("Generated JSON is not a valid quiz structure (missing or empty 'questions' array):", parsed);
-                    throw new Error("Generated JSON is not a valid quiz structure.");
-                }
+                     throw new Error("Generated JSON is not a valid quiz structure.");
+                 }
                  if (parsed.questions.length !== numQuestions) {
                       console.warn(`Requested ${numQuestions} questions, but received ${parsed.questions.length}. Using received questions.`);
                      // Allow proceeding with the received number, but log a warning.
                  }
 
-                // Validate each question more thoroughly
-                parsed.questions.forEach((q, index) => {
+                 // Validate each question more thoroughly
+                 parsed.questions.forEach((q, index) => {
                      const questionNum = index + 1;
-                    if (!q.question || typeof q.question !== 'string') throw new Error(`Question ${questionNum}: Missing or invalid 'question' text.`);
-                    if (!q.options || !Array.isArray(q.options) || q.options.length !== 4) throw new Error(`Question ${questionNum}: 'options' must be an array of exactly 4 strings.`);
-                    q.options.forEach((opt, optIndex) => { if (typeof opt !== 'string') throw new Error(`Question ${questionNum}, Option ${optIndex + 1}: Option must be a string.`); });
-                    if (!q.answer || typeof q.answer !== 'string') throw new Error(`Question ${questionNum}: Missing or invalid 'answer' text.`);
-                    if (!q.options.includes(q.answer)) {
+                     if (!q.question || typeof q.question !== 'string') throw new Error(`Question ${questionNum}: Missing or invalid 'question' text.`);
+                     if (!q.options || !Array.isArray(q.options) || q.options.length !== 4) throw new Error(`Question ${questionNum}: 'options' must be an array of exactly 4 strings.`);
+                     q.options.forEach((opt, optIndex) => { if (typeof opt !== 'string') throw new Error(`Question ${questionNum}, Option ${optIndex + 1}: Option must be a string.`); });
+                     if (!q.answer || typeof q.answer !== 'string') throw new Error(`Question ${questionNum}: Missing or invalid 'answer' text.`);
+                     if (!q.options.includes(q.answer)) {
                          console.error(`Question ${questionNum}: Answer "${q.answer}" not found in options:`, q.options);
-                        throw new Error(`Question ${questionNum}: Answer is not present in the options array.`);
-                    }
-                     if (!q.explanation || typeof q.explanation !== 'string') throw new Error(`Question ${questionNum}: Missing or invalid 'explanation' text.`);
-                });
+                         throw new Error(`Question ${questionNum}: Answer is not present in the options array.`);
+                     }
+                      if (!q.explanation || typeof q.explanation !== 'string') throw new Error(`Question ${questionNum}: Missing or invalid 'explanation' text.`);
+                 });
 
                  console.log("Successfully parsed and validated quiz JSON:", parsed.questions);
-                return parsed.questions;
+                 return parsed.questions;
 
             } catch (error) {
-                console.error("Error in generateQuizJSON function:", error);
-                 alert(`An error occurred while generating the quiz: ${error.message}. Please try again or check the console.`);
-                return null;
+                 console.error("Error in generateQuizJSON function:", error);
+                 showInfoModal(`An error occurred while generating the quiz: ${error.message}. Please try again or check the console.`);
+                 return null;
             }
         }
 
         async function generateSingleQuestionJSON(originalQuestion, correctAnswer) {
-            if (apiKey === "PASTE_YOUR_GEMINI_API_KEY_HERE" || !apiKey) {
-                console.error("Gemini API Key is missing or invalid.");
-                alert("Developer Error: Gemini API Key is missing or invalid. Please add your API key to the script to use AI features.");
-                return null;
-            }
+            // API key check removed
 
             const currentLangName = languages[gameState.currentLanguage] || 'English';
 
@@ -1114,57 +1134,57 @@
              Output ONLY the valid JSON object adhering strictly to the provided schema. Do not include any introductory text, markdown formatting (like \`\`\`json), or concluding remarks outside the JSON structure.`;
 
             const payload = {
-                contents: [{ parts: [{ text: prompt }] }],
+                 contents: [{ parts: [{ text: prompt }] }],
                  generationConfig: {
-                    responseMimeType: "application/json",
-                    responseSchema: schema
-                }
-                 // Add safety settings if needed
+                     responseMimeType: "application/json",
+                     responseSchema: schema
+                 }
+                  // Add safety settings if needed
             };
 
-            const model = 'gemini-1.5-flash-latest';
+            const model = 'gemini-2.5-flash-preview-09-2025'; // Updated model
             const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
              console.log("Sending single question prompt:", prompt); // Log prompt
 
 
              try {
-                const response = await fetch(apiUrl, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(payload)
-                });
+                 const response = await fetch(apiUrl, {
+                     method: 'POST',
+                     headers: { 'Content-Type': 'application/json' },
+                     body: JSON.stringify(payload)
+                 });
 
                  const responseData = await response.json(); // Always parse response
 
-                if (!response.ok) {
-                    console.error(`API Error generating single question: ${response.status}. Response:`, JSON.stringify(responseData, null, 2));
-                    throw new Error(`API Error: ${responseData?.error?.message || response.status}`);
+                 if (!response.ok) {
+                     console.error(`API Error generating single question: ${response.status}. Response:`, JSON.stringify(responseData, null, 2));
+                     throw new Error(`API Error: ${responseData?.error?.message || response.status}`);
                  }
 
                  if (!responseData || !responseData.candidates || responseData.candidates.length === 0) {
-                     console.error("Invalid single question response - no candidates:", responseData);
-                     throw new Error("Invalid API response: No candidates found.");
+                      console.error("Invalid single question response - no candidates:", responseData);
+                      throw new Error("Invalid API response: No candidates found.");
                  }
                  const candidate = responseData.candidates[0];
 
                  if (candidate.finishReason && candidate.finishReason !== "STOP") {
-                     console.warn(`Single question generation finished with reason: ${candidate.finishReason}. Safety ratings:`, candidate.safetyRatings);
-                      if (candidate.finishReason === "SAFETY") {
-                         throw new Error("Content generation blocked due to safety settings.");
-                     }
-                      throw new Error(`Single question generation finished unexpectedly: ${candidate.finishReason}`);
+                      console.warn(`Single question generation finished with reason: ${candidate.finishReason}. Safety ratings:`, candidate.safetyRatings);
+                       if (candidate.finishReason === "SAFETY") {
+                           throw new Error("Content generation blocked due to safety settings.");
+                      }
+                       throw new Error(`Single question generation finished unexpectedly: ${candidate.finishReason}`);
                  }
 
                  if (!candidate.content || !candidate.content.parts || candidate.content.parts.length === 0 || !candidate.content.parts[0].text) {
-                     console.error("Invalid single question response - missing text content:", responseData);
-                     throw new Error("Invalid API response: Missing text content.");
+                      console.error("Invalid single question response - missing text content:", responseData);
+                      throw new Error("Invalid API response: Missing text content.");
                  }
 
 
                 const jsonText = candidate.content.parts[0].text;
                  console.log("Received raw single question JSON text:", jsonText);
 
-                let parsed;
+                 let parsed;
                  try {
                      parsed = JSON.parse(jsonText);
                  } catch (parseError) {
@@ -1173,25 +1193,25 @@
                  }
 
 
-                // Add validation
-                 if (!parsed.question || typeof parsed.question !== 'string') throw new Error(`Generated Question: Missing or invalid 'question' text.`);
-                 if (!parsed.options || !Array.isArray(parsed.options) || parsed.options.length !== 4) throw new Error(`Generated Question: 'options' must be an array of exactly 4 strings.`);
-                 parsed.options.forEach((opt, optIndex) => { if (typeof opt !== 'string') throw new Error(`Generated Question, Option ${optIndex + 1}: Option must be a string.`); });
-                 if (!parsed.answer || typeof parsed.answer !== 'string') throw new Error(`Generated Question: Missing or invalid 'answer' text.`);
-                 if (!parsed.options.includes(parsed.answer)) {
-                    console.error(`Generated Question: Answer "${parsed.answer}" not found in options:`, parsed.options);
-                    throw new Error(`Generated Question: Answer is not present in the options array.`);
-                 }
-                 if (!parsed.explanation || typeof parsed.explanation !== 'string') throw new Error(`Generated Question: Missing or invalid 'explanation' text.`);
+                 // Add validation
+                  if (!parsed.question || typeof parsed.question !== 'string') throw new Error(`Generated Question: Missing or invalid 'question' text.`);
+                  if (!parsed.options || !Array.isArray(parsed.options) || parsed.options.length !== 4) throw new Error(`Generated Question: 'options' must be an array of exactly 4 strings.`);
+                  parsed.options.forEach((opt, optIndex) => { if (typeof opt !== 'string') throw new Error(`Generated Question, Option ${optIndex + 1}: Option must be a string.`); });
+                  if (!parsed.answer || typeof parsed.answer !== 'string') throw new Error(`Generated Question: Missing or invalid 'answer' text.`);
+                  if (!parsed.options.includes(parsed.answer)) {
+                     console.error(`Generated Question: Answer "${parsed.answer}" not found in options:`, parsed.options);
+                     throw new Error(`Generated Question: Answer is not present in the options array.`);
+                  }
+                  if (!parsed.explanation || typeof parsed.explanation !== 'string') throw new Error(`Generated Question: Missing or invalid 'explanation' text.`);
 
                  console.log("Successfully parsed and validated single question JSON:", parsed);
-                return parsed;
+                 return parsed;
 
-            } catch (error) {
-                console.error("Error in generateSingleQuestionJSON function:", error);
-                 alert(`An error occurred while generating the follow-up question: ${error.message}. Please check the console.`);
-                return null;
-            }
+             } catch (error) {
+                 console.error("Error in generateSingleQuestionJSON function:", error);
+                 showInfoModal(`An error occurred while generating the follow-up question: ${error.message}. Please check the console.`);
+                 return null;
+             }
         }
 
         // --- Core Game Logic ---
@@ -1209,7 +1229,7 @@
         }
 
         async function startLevel(levelNum, customQuestions = null, isStudentQuiz = false) {
-            if (!audioInitialized) initAudio();
+            // Audio init is handled by first click, but BGM start is here
             playBGM(levelNum === 'Daily' || levelNum === 'Student Quiz' || typeof levelNum !== 'number' ? 10 : levelNum);
 
             let questions = customQuestions;
@@ -1217,11 +1237,11 @@
                 questions = await getQuestionsForLevel(levelNum);
                 if(!questions) {
                     // Alert is now handled within the generation function if API key is missing or API fails
-                    // alert("Failed to load or generate questions for this level. Please try again.");
+                    // showInfoModal("Failed to load or generate questions for this level. Please try again.");
                     stopBGM();
                      if (dom.quizScreen.classList.contains('flex')) {
-                        showLevelSelect(); // Go back if already in quiz screen
-                    }
+                         showLevelSelect(); // Go back if already in quiz screen
+                     }
                     return;
                 }
             }
@@ -1258,7 +1278,7 @@
             const questionData = gameState.levelQuestions[gameState.currentQuestionIndex];
             if (!questionData || !questionData.question || !questionData.options || !Array.isArray(questionData.options) || questionData.options.length !== 4 || !questionData.answer) {
                  console.error("Invalid or incomplete question data encountered:", questionData, "at index:", gameState.currentQuestionIndex);
-                 alert("Error: Encountered an invalid question. Skipping to the next or ending level.");
+                 showInfoModal("Error: Encountered an invalid question. Skipping to the next or ending level.");
                  gameState.currentQuestionIndex++; // Try skipping
                  if (gameState.currentQuestionIndex >= gameState.levelQuestions.length) {
                     endLevel();
@@ -1290,11 +1310,11 @@
             const questionData = gameState.levelQuestions[gameState.currentQuestionIndex];
 
              if (!questionData || !questionData.answer) {
-                console.error("Cannot select answer: questionData is invalid.", questionData);
-                alert("An error occurred processing this question.");
-                goToNextQuestion();
-                return;
-            }
+                 console.error("Cannot select answer: questionData is invalid.", questionData);
+                 showInfoModal("An error occurred processing this question.");
+                 goToNextQuestion();
+                 return;
+             }
             const correctAnswer = questionData.answer;
 
             // Disable all buttons
@@ -1319,7 +1339,7 @@
                     gameState.streak = 0;
                     playerState.correctAnswersInRow = 0;
                      // Ensure wronglyAnsweredQuestions exists
-                    if (!gameState.wronglyAnsweredQuestions) gameState.wronglyAnsweredQuestions = [];
+                     if (!gameState.wronglyAnsweredQuestions) gameState.wronglyAnsweredQuestions = [];
                     gameState.wronglyAnsweredQuestions.push({
                         question: questionData.question,
                         yourAnswer: selectedAnswer,
@@ -1354,7 +1374,7 @@
              let nextActionHandler = () => {
                  dom.modalContainer.classList.add('hidden');
                  showLevelSelect();
-            };
+             };
 
             if (gameState.isDailyChallenge) {
                  dom.modalTitle.textContent = "Daily Challenge Complete!";
@@ -1370,14 +1390,14 @@
                  dom.analyzePerformanceBtn.classList.add('hidden');
 
             } else if (gameState.isStudentQuiz) {
-                dom.modalTitle.textContent = "Practice Complete!";
-                dom.modalStatus.textContent = `You scored ${percentage}%!`;
-                nextActionText = 'Back to Student Section'; // Change button text
-                nextActionHandler = () => { // Change handler
-                    dom.modalContainer.classList.add('hidden');
-                    showStudentSection();
-                };
-                 // Show analysis only if answers were wrong
+                 dom.modalTitle.textContent = "Practice Complete!";
+                 dom.modalStatus.textContent = `You scored ${percentage}%!`;
+                 nextActionText = 'Back to Student Section'; // Change button text
+                 nextActionHandler = () => { // Change handler
+                     dom.modalContainer.classList.add('hidden');
+                     showStudentSection();
+                 };
+                  // Show analysis only if answers were wrong
                  dom.analyzePerformanceBtn.classList.toggle('hidden', gameState.wronglyAnsweredQuestions.length === 0);
 
             } else if (gameState.isFollowUp) {
@@ -1387,34 +1407,34 @@
                  dom.analyzePerformanceBtn.classList.add('hidden');
             }
             else { // Regular Level or Custom Quiz
-                const isRegularLevel = typeof gameState.currentLevel === 'number';
-                dom.modalTitle.textContent = passed
-                    ? `${isRegularLevel ? `Level ${gameState.currentLevel}` : 'Quiz'} Complete!`
-                    : `${isRegularLevel ? `Level ${gameState.currentLevel}` : 'Quiz'} Failed`;
+                 const isRegularLevel = typeof gameState.currentLevel === 'number';
+                 dom.modalTitle.textContent = passed
+                     ? `${isRegularLevel ? `Level ${gameState.currentLevel}` : 'Quiz'} Complete!`
+                     : `${isRegularLevel ? `Level ${gameState.currentLevel}` : 'Quiz'} Failed`;
 
                  dom.modalStatus.textContent = passed ? (isRegularLevel ? '🎉 UNLOCKED NEXT LEVEL 🎉' : '🎉 Well Done! 🎉') : 'Better luck next time!';
 
                 if(passed) {
-                    if(levelCompleteSound) try { levelCompleteSound.triggerAttackRelease(["C4", "E4", "G4"], "4n"); } catch(e){ console.warn("Audio error:", e); }
+                     if(levelCompleteSound) try { levelCompleteSound.triggerAttackRelease(["C4", "E4", "G4"], "4n"); } catch(e){ console.warn("Audio error:", e); }
                 } else {
-                    if(levelFailSound) try { levelFailSound.triggerAttackRelease(["C3", "D#3", "G3"], "4n"); } catch(e){ console.warn("Audio error:", e); }
+                     if(levelFailSound) try { levelFailSound.triggerAttackRelease(["C3", "D#3", "G3"], "4n"); } catch(e){ console.warn("Audio error:", e); }
                 }
 
                  if (isRegularLevel) {
-                    if (passed) {
-                         nextActionText = 'Next Level';
-                         nextActionHandler = () => {
-                            dom.modalContainer.classList.add('hidden');
-                            startLevel(gameState.currentLevel + 1);
-                        };
-                    } else {
-                        nextActionText = 'Retry Level';
-                         nextActionHandler = () => {
-                            dom.modalContainer.classList.add('hidden');
-                            startLevel(gameState.currentLevel);
-                        };
-                    }
-                }
+                     if (passed) {
+                          nextActionText = 'Next Level';
+                          nextActionHandler = () => {
+                             dom.modalContainer.classList.add('hidden');
+                             startLevel(gameState.currentLevel + 1);
+                         };
+                     } else {
+                         nextActionText = 'Retry Level';
+                          nextActionHandler = () => {
+                             dom.modalContainer.classList.add('hidden');
+                             startLevel(gameState.currentLevel);
+                         };
+                     }
+                 }
                  // Else (Custom Quiz), next action remains default (Back to Levels)
 
                 if (passed) {
@@ -1463,12 +1483,19 @@
              console.log("Showing screen:", screenId); // Log screen changes
         }
 
+        /**
+         * Shows a non-blocking info modal.
+         * @param {string} message - The message to display.
+         * @param {string} [title="Info"] - The title for the modal.
+         */
+        function showInfoModal(message, title = "Info") {
+            dom.infoModalTitle.textContent = title;
+            dom.infoModalText.textContent = message;
+            showModal(dom.infoModal);
+        }
 
         async function init() {
-            // Initial API Key Check - moved here for earlier execution
-            if (apiKey === "PASTE_YOUR_GEMINI_API_KEY_HERE" || !apiKey) {
-                 alert("Welcome! To enable AI-powered quiz generation (Custom Quiz, Student Section, Daily Challenge, and non-English levels), please paste your Google Gemini API key into the 'apiKey' variable near the top of the script. You can get a key from Google AI Studio.");
-            }
+            // API Key check removed, as empty string is the intended value.
 
             await initFirebase(); // Handles initial state loading (Firestore or local)
 
@@ -1485,11 +1512,11 @@
             }
 
             showScreen('start-screen');
-            initAudio(); // Initialize audio after showing the first screen to allow user interaction
+            // Audio init is now deferred to the first user click (selectLanguage)
         }
 
         function selectLanguage(e) {
-            // initAudio(); // Audio should already be init by now from init()
+            initAudio(); // Initialize audio on the first user interaction
             gameState.currentLanguage = e.target.dataset.lang;
             console.log(`Language selected: ${gameState.currentLanguage}`);
             showScreen('main-menu-screen');
@@ -1527,17 +1554,17 @@
                 if (isUnlocked) {
                     const achievement = isMilestone ? achievements[milestoneId] : null;
                     if (hasCompletedMilestone && achievement) {
-                        button.innerHTML = `<i class="fas ${achievement.icon} text-xl ${achievement.color}"></i>`;
-                        // Determine hover color based on original color
-                        const bgColorClass = achievement.bgColor || 'bg-purple-600';
-                        const hoverBgClass = bgColorClass.includes('900') ? bgColorClass : (bgColorClass.includes('800') ? bgColorClass.replace('800', '900') : bgColorClass.replace('600', '700'));
-                        button.classList.add(bgColorClass, `hover:${hoverBgClass}`);
-                        button.title = achievement.title;
+                         button.innerHTML = `<i class="fas ${achievement.icon} text-xl ${achievement.color}"></i>`;
+                         // Determine hover color based on original color
+                         const bgColorClass = achievement.bgColor || 'bg-purple-600';
+                         const hoverBgClass = bgColorClass.includes('900') ? bgColorClass : (bgColorClass.includes('800') ? bgColorClass.replace('800', '900') : bgColorClass.replace('600', '700'));
+                         button.classList.add(bgColorClass, `hover:${hoverBgClass}`);
+                         button.title = achievement.title;
                     } else {
-                        button.innerHTML = `<span>${i}</span>`;
-                        button.classList.add('bg-purple-600', 'hover:bg-purple-700');
-                         if (isMilestone && achievement) button.title = `Level ${i} - ${achievement.title}`; // Title for uncompleted milestone
-                         else button.title = `Level ${i}`;
+                         button.innerHTML = `<span>${i}</span>`;
+                         button.classList.add('bg-purple-600', 'hover:bg-purple-700');
+                          if (isMilestone && achievement) button.title = `Level ${i} - ${achievement.title}`; // Title for uncompleted milestone
+                          else button.title = `Level ${i}`;
                     }
                     button.addEventListener('click', () => startLevel(i));
                 } else { // LOCKED
@@ -1552,7 +1579,7 @@
                             button.innerHTML = `<i class="fas fa-lock"></i>`; // Fallback lock icon
                          }
                     } else {
-                        button.innerHTML = `<i class="fas fa-lock"></i>`;
+                         button.innerHTML = `<i class="fas fa-lock"></i>`;
                     }
                 }
                 dom.levelGrid.appendChild(button);
@@ -1638,7 +1665,7 @@
             const numQuestions = parseInt(dom.studentQuestionCountSelect.value, 10);
 
             if (!sClass || !country || !board || !subject) {
-                alert("Please fill in all required fields: Class, Country, Board, and Subject.");
+                showInfoModal("Please fill in all required fields: Class, Country, Board, and Subject.", "Form Incomplete");
                 return;
             }
 
@@ -1647,12 +1674,12 @@
             dom.studentStartQuizBtn.disabled = true;
 
             const prompt = `
-                Quiz Target: A student in ${sClass}.
-                Country: ${country}.
-                Curriculum/Board: ${board}.
-                Subject: ${subject}.
-                ${topic ? `Specific Topic: ${topic}.` : 'Topic: General mix for the selected subject.'}
-                Difficulty: ${difficulty}/10 (1 is easiest, 10 is hardest for this specific class level and subject).
+                 Quiz Target: A student in ${sClass}.
+                 Country: ${country}.
+                 Curriculum/Board: ${board}.
+                 Subject: ${subject}.
+                 ${topic ? `Specific Topic: ${topic}.` : 'Topic: General mix for the selected subject.'}
+                 Difficulty: ${difficulty}/10 (1 is easiest, 10 is hardest for this specific class level and subject).
             `;
 
             const questions = await generateQuizJSON(prompt, numQuestions);
@@ -1679,7 +1706,7 @@
             const currentTheme = document.body.className.match(/theme-\w+/)?.[0] || 'theme-lexicon';
             dom.themeChangeSelect.value = currentTheme;
             updateFullscreenButton();
-            dom.volumeSlider.value = bgmGain ? bgmGain.gain.value : 0.3;
+            dom.volumeSlider.value = bgmGain ? bgmGain.gain.value : 0.1; // Use 0.1 default
             showModal(dom.settingsModal);
         }
 
@@ -1823,7 +1850,7 @@
 
         function showModal(modalElement) {
             dom.modalContainer.classList.remove('hidden');
-            [dom.levelResultModal, dom.hintModal, dom.confirmModal, dom.analysisModal, dom.achievementsModal, dom.storeModal, dom.settingsModal].forEach(m => m.classList.add('hidden'));
+            [dom.levelResultModal, dom.hintModal, dom.confirmModal, dom.analysisModal, dom.achievementsModal, dom.storeModal, dom.settingsModal, dom.infoModal].forEach(m => m.classList.add('hidden'));
             modalElement.classList.remove('hidden');
         }
 
@@ -1893,7 +1920,7 @@
 
                     } catch (error) {
                         console.error("Error deleting player state from Firestore:", error);
-                         alert("Error resetting progress online. Please try refreshing.");
+                         showInfoModal("Error resetting progress online. Please try refreshing.");
                     }
                 } else {
                      // If no user ID, just clear local and reload state
@@ -1932,9 +1959,9 @@
 
         async function handleAnalyzePerformance() {
              if (!gameState.wronglyAnsweredQuestions || gameState.wronglyAnsweredQuestions.length === 0) {
-                 alert("No incorrect answers to analyze for this session!");
+                 showInfoModal("No incorrect answers to analyze for this session!");
                  return;
-            }
+             }
             dom.analysisText.innerHTML = 'Analyzing your answers... <div class="spinner inline-block ml-2"></div>'; // Show spinner
             showModal(dom.analysisModal);
 
@@ -1943,10 +1970,10 @@
              // Simple markdown to HTML (replace **text** with <strong>text</strong> and *text* with <em>text</em>, and newlines with <br>)
              // NOTE: This is basic; a proper markdown library would be better for complex formatting.
              const formattedAnalysis = analysis
-                                        ? analysis.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
-                                                  .replace(/\*(.*?)\*/g, '<em>$1</em>')
-                                                  .replace(/\n/g, '<br>')
-                                        : "Could not generate analysis at this time.";
+                                     ? analysis.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+                                               .replace(/\*(.*?)\*/g, '<em>$1</em>')
+                                               .replace(/\n/g, '<br>')
+                                     : "Could not generate analysis at this time.";
             dom.analysisText.innerHTML = formattedAnalysis;
         }
 
@@ -1955,9 +1982,9 @@
             checkAchievement('curious'); // Check here, as it's the trigger action
             const questionData = gameState.levelQuestions[gameState.currentQuestionIndex];
              if (!questionData || !questionData.question || !questionData.answer) {
-                 alert("Cannot generate follow-up: Current question data is invalid.");
+                 showInfoModal("Cannot generate follow-up: Current question data is invalid.");
                  return;
-            }
+             }
 
             dom.questionTextEl.textContent = 'Generating a related question...';
             dom.answersBoxEl.innerHTML = '';
@@ -1971,8 +1998,8 @@
                  gameState.currentQuestionIndex = 0;
                  showNextQuestion(true); // Indicate it's a follow-up
             } else {
-                dom.questionTextEl.textContent = 'Could not generate a follow-up question. Please try again later, or go back.';
-                 // Add a button to go back maybe?
+                 dom.questionTextEl.textContent = 'Could not generate a follow-up question. Please try again later, or go back.';
+                  // Add a button to go back maybe?
                  const backBtn = document.createElement('button');
                  backBtn.textContent = 'Back to Levels';
                  backBtn.className = 'btn bg-blue-500 hover:bg-blue-600 p-4 rounded-lg mt-4';
@@ -2050,17 +2077,17 @@
                 const element = document.createElement('div');
                 element.className = `p-4 rounded-lg flex items-center gap-4 border-2 ${isUnlocked ? 'bg-yellow-900/50 border-yellow-500' : 'bg-gray-800/50 border-gray-700'}`;
                 element.innerHTML = `
-                    <div class="w-12 h-12 flex-shrink-0 rounded-full flex items-center justify-center ${isUnlocked ? ach.bgColor : 'bg-gray-600'}">
-                        <i class="fas ${ach.icon} text-2xl ${isUnlocked ? ach.color : 'text-gray-400'}"></i>
-                    </div>
-                    <div>
-                        <h3 class="font-bold text-lg ${isUnlocked ? 'text-white' : 'text-gray-400'}">${ach.title}</h3>
-                        <p class="text-sm ${isUnlocked ? 'text-gray-300' : 'text-gray-500'}">${ach.description}</p>
-                    </div>
-                    <div class="ml-auto text-center flex-shrink-0">
-                        <p class="font-bold text-lg text-yellow-400">+${ach.reward || 0}</p>
-                        <i class="fas fa-coins text-yellow-400"></i>
-                    </div>
+                     <div class="w-12 h-12 flex-shrink-0 rounded-full flex items-center justify-center ${isUnlocked ? ach.bgColor : 'bg-gray-600'}">
+                         <i class="fas ${ach.icon} text-2xl ${isUnlocked ? ach.color : 'text-gray-400'}"></i>
+                     </div>
+                     <div>
+                         <h3 class="font-bold text-lg ${isUnlocked ? 'text-white' : 'text-gray-400'}">${ach.title}</h3>
+                         <p class="text-sm ${isUnlocked ? 'text-gray-300' : 'text-gray-500'}">${ach.description}</p>
+                     </div>
+                     <div class="ml-auto text-center flex-shrink-0">
+                         <p class="font-bold text-lg text-yellow-400">+${ach.reward || 0}</p>
+                         <i class="fas fa-coins text-yellow-400"></i>
+                     </div>
                 `;
                 dom.achievementsList.appendChild(element);
             });
@@ -2096,17 +2123,17 @@
                  const element = document.createElement('div');
                  element.className = 'p-4 bg-gray-800/50 rounded-lg flex items-center gap-4';
                  element.innerHTML = `
-                     <div class="w-12 h-12 flex-shrink-0 rounded-full bg-gray-700 flex items-center justify-center">
-                         <i class="fas ${item.icon} text-2xl ${item.color}"></i>
-                     </div>
-                     <div>
-                         <h3 class="font-bold text-lg text-white">${item.name}</h3>
-                         <p class="text-sm text-gray-300">${item.description}</p>
-                     </div>
-                     <button data-item-id="${id}" class="store-buy-btn btn bg-green-600 hover:bg-green-700 ml-auto flex items-center gap-2 font-bold py-2 px-4 rounded-lg flex-shrink-0">
-                         <i class="fas fa-coins"></i>
-                         <span>${item.cost}</span>
-                     </button>
+                      <div class="w-12 h-12 flex-shrink-0 rounded-full bg-gray-700 flex items-center justify-center">
+                           <i class="fas ${item.icon} text-2xl ${item.color}"></i>
+                      </div>
+                      <div>
+                           <h3 class="font-bold text-lg text-white">${item.name}</h3>
+                           <p class="text-sm text-gray-300">${item.description}</p>
+                      </div>
+                      <button data-item-id="${id}" class="store-buy-btn btn bg-green-600 hover:bg-green-700 ml-auto flex items-center gap-2 font-bold py-2 px-4 rounded-lg flex-shrink-0">
+                           <i class="fas fa-coins"></i>
+                           <span>${item.cost}</span>
+                      </button>
                  `;
                  dom.storeItemsList.appendChild(element);
              });
@@ -2133,8 +2160,8 @@
                 button.innerHTML = '<i class="fas fa-check"></i> Purchased!';
                 button.disabled = true;
             } else {
-                if(incorrectSound) try { incorrectSound.triggerAttackRelease("C3", "8n"); } catch(e){ console.warn("Audio error:", e); }
-                alert("Not enough coins!");
+                 if(incorrectSound) try { incorrectSound.triggerAttackRelease("C3", "8n"); } catch(e){ console.warn("Audio error:", e); }
+                 showInfoModal("Not enough coins!", "Store");
             }
         }
 
@@ -2178,6 +2205,7 @@
             if (dom.confirmCancelBtn) dom.confirmCancelBtn.addEventListener('click', () => dom.modalContainer.classList.add('hidden'));
             if (dom.analyzePerformanceBtn) dom.analyzePerformanceBtn.addEventListener('click', handleAnalyzePerformance);
             if (dom.closeAnalysisBtn) dom.closeAnalysisBtn.addEventListener('click', () => dom.modalContainer.classList.add('hidden'));
+            if (dom.infoModalOkBtn) dom.infoModalOkBtn.addEventListener('click', () => dom.modalContainer.classList.add('hidden'));
 
             // Settings Modal
             if (dom.closeSettingsBtn) dom.closeSettingsBtn.addEventListener('click', () => dom.modalContainer.classList.add('hidden'));
@@ -2190,9 +2218,9 @@
             // Store
             if (dom.storeItemsList) dom.storeItemsList.addEventListener('click', buyStoreItem);
 
-             // Initialize App - moved inside DOMContentLoaded to ensure elements exist
-             init();
-         });
+              // Initialize App - moved inside DOMContentLoaded to ensure elements exist
+               init();
+          });
 
     </script>
 </body>
